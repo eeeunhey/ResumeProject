@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&display=swap");
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* 🎨 Theme 토큰 */
 @theme {
@@ -19,6 +20,15 @@
   --color-badge-yellow-text: #73321b;
 }
 
+html
+body {
+  @apply bg-white;
+}
+main {
+  @apply min-h-screen pt-10;
+}
+
+
 /* 🛠 커스텀 유틸리티 */
 @utility text-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r
@@ -29,9 +39,6 @@
   @apply bg-gradient-to-r from-indigo-500 to-pink-500;
 }
 
-/* 📌 Global 스타일 */
-body { @apply bg-black; }
-main { @apply min-h-screen pt-10; }
 
 h1 { @apply text-6xl text-gradient leading-tight tracking-[-2px] font-semibold; }
 h2 { @apply text-3xl text-dark-200; }
