@@ -1,10 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 @import "tailwindcss";
 @import "tw-animate-css";
 
 /* 🎨 Theme 토큰 */
 @theme {
-  --font-sans: "Mona Sans", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Pretendard", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans KR", sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   --color-dark-200: #475467;
@@ -42,13 +43,19 @@ main {
 
 h1 { @apply text-6xl text-gradient leading-tight tracking-[-2px] font-semibold; }
 h2 { @apply text-3xl text-dark-200; }
-
+label {
+  @apply text-dark-200;
+}
 input { @apply w-full p-4 shadow-inner rounded-2xl focus:outline-none bg-white; }
 textarea { @apply w-full p-4 shadow-inner rounded-2xl focus:outline-none bg-white; }
 form { @apply flex flex-col items-start gap-8 w-full; }
 
 /* 📦 컴포넌트 스타일 */
 @layer components {
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] via-[#000000] to-[#8E97C5];
+}
+
   .gradient-border {
     @apply bg-gradient-to-b from-light-blue-100 to-light-blue-200 p-4 rounded-2xl;
   }
@@ -63,7 +70,6 @@ form { @apply flex flex-col items-start gap-8 w-full; }
 
   .resume-summary {
     @apply flex flex-row items-center justify-center p-4 gap-4;
-
     .category {
       @apply flex flex-row gap-2 items-center bg-gray-50 rounded-2xl p-4 w-full justify-between;
     }
