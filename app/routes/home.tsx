@@ -1,23 +1,33 @@
 import type { Route } from "./+types/home";
+import Navbar from "~/components/Navbar";
+
 // 타입을 가져오는데 라우트라는 타입 설명서만 가져온다
 // ./+types/home : home.tsx 라는 라우트 파일이 있으면 거기에 맞춰서 생성된다함
 // import 대신 import type을 쓰면 타입만 가져와서 실행 코드에서는 사라짐
 // 왜 type으로 가져올까? : 어떤 데이터가 있는지에 대해 안내해준다
-// 
+//
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Resumind" },
+    { title: "NextArc" },
     { name: "description", content: "Welcome to React Router!" },
   ];
 }
 
 export default function Home() {
-  return <main>
-    <section className="main-section">
-      <div className="page-heading">
-        <h1> 지원 내역과 이력서 평가 결과를 쉽게 확인하고 관리할 수 있습니다 </h1>
-      </div>
-    </section>
-  </main>;
+  return (
+    <main className="bg-[url('/images/bg-main.svg')] bg-cover">
+      <Navbar />
+      <section className="main-section">
+        <div className="page-heading">
+          <h1>NextArc — 나의 커리어 흐름을 다음 단계로</h1>
+          <h2>
+            지원 기록을 한눈에 정리하고,
+            <br />
+            AI 맞춤 피드백으로 더 나은 준비를 시작하세요
+          </h2>
+        </div>
+      </section>
+    </main>
+  );
 }

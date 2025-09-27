@@ -162,5 +162,11 @@ function Counter() {
 
 ---
 
-👉 원하시면 제가 이 네 가지를 **하나의 React 예제 프로젝트** 안에서 어떻게 같이 쓰이는지 코드로 묶어서 보여드릴 수도 있어요. 그럴까요?
 
+
+home.tsx로 <main> 태그추가
+<sestion className="main-section">
+<div className="page-heading">
+</div>
+<sestion>
+</main>

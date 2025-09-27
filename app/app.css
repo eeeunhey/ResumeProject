@@ -41,6 +41,8 @@ main {
 }
 
 
+
+
 h1 { @apply text-6xl text-gradient leading-tight tracking-[-2px] font-semibold; }
 h2 { @apply text-3xl text-dark-200; }
 label {
@@ -52,6 +54,8 @@ form { @apply flex flex-col items-start gap-8 w-full; }
 
 /* 📦 컴포넌트 스타일 */
 @layer components {
+
+
 .text-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-[#AB8C95] via-[#000000] to-[#8E97C5];
 }
@@ -77,5 +81,9 @@ form { @apply flex flex-col items-start gap-8 w-full; }
 
   .back-button {
     @apply flex flex-row items-center gap-2 border border-gray-200 rounded-lg p-2 shadow-sm;
+  }
+
+  .page-heading {
+    @apply flex flex-col items-center justify-center text-center;
   }
 }
