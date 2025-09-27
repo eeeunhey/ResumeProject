@@ -20,7 +20,7 @@ export default function Home() {
       <Navbar />
       <section className="main-section">
         <div className="page-heading">
-          <h1>NextArc — 나의 커리어 흐름을 다음 단계로</h1>
+          <h1>Ascend — 나의 커리어 흐름을 다음 단계로</h1>
           <h2>
             지원 기록을 한눈에 정리하고,
             <br />
