@@ -1,4 +1,4 @@
-name: Sync STUDYLOG to Wiki (FE/BE, clean links)
+name: Sync STUDYLOG to Wiki (FE/BE, clean links + labels)
 
 on:
   workflow_dispatch:
@@ -122,16 +122,14 @@ jobs:
         run: |
           set -euo pipefail
           cd _wiki
-          # 예전 STUDYLOG 디렉토리/루트의 [FE]/[BE] 페이지 제거
           rm -rf STUDYLOG || true
           find . -maxdepth 1 -type f -name "[[]FE[]]*.md" -delete || true
           find . -maxdepth 1 -type f -name "[[]BE[]]*.md" -delete || true
-          # FE/BE 안에 있는 것과 이름이 같은 루트 페이지가 있으면 삭제
           for f in FE/*.md; do bn="$(basename "$f")"; [ -f "$bn" ] && rm -f "$bn"; done
           for f in BE/*.md; do bn="$(basename "$f")"; [ -f "$bn" ] && rm -f "$bn"; done
           cd -
 
-      - name: Rebuild Home (FE/BE — direct links, no misc)
+      - name: Rebuild Home (FE/BE — direct links with labels)
         shell: bash
         run: |
           set -euo pipefail
@@ -162,13 +160,13 @@ jobs:
           for F in "${FES[@]}"; do
             T="$(get_title "_wiki/FE/$F")"
             SLUG="${F%.md}"
-            echo "- [${T}](FE/${SLUG})" >> "$INDEX_FE"     # 확장자 없이 링크
+            echo "- [[FE/${SLUG}|[FE] ${T}]]" >> "$INDEX_FE"   # ← 표시 텍스트에 [FE] 붙임
           done
 
           for F in "${BES[@]}"; do
             T="$(get_title "_wiki/BE/$F")"
             SLUG="${F%.md}"
-            echo "- [${T}](BE/${SLUG})" >> "$INDEX_BE"     # 확장자 없이 링크
+            echo "- [[BE/${SLUG}|[BE] ${T}]]" >> "$INDEX_BE"   # ← 표시 텍스트에 [BE] 붙임
           done
 
           {
