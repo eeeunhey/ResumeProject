@@ -1,0 +1,193 @@
+name: Sync Study Logs to Wiki (with FE/BE sections)
+
+on:
+  push:
+    branches: [ "**" ]
+    paths:
+      - "스터디로그/**"
+  pull_request:
+    branches: [ "**" ]
+    paths:
+      - "스터디로그/**"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed study logs
+        id: diff
+        shell: bash
+        run: |
+          set -e
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # 초기 커밋/포크 등: 전체 스캔
+            git ls-files -z '스터디로그/**/*.md' > changed.zlist || true
+          else
+            git diff --name-only -z "$BEFORE" "$AFTER" -- '스터디로그/**/*.md' > changed.zlist || true
+          fi
+
+          # 사람이 보기 좋게 로그도 남김
+          tr '\0' '\n' < changed.zlist | tee changed.txt
+
+          echo "changed<<EOF" >> $GITHUB_OUTPUT
+          cat changed.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Install helpers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq moreutils
+
+      - name: Collect metadata
+        id: meta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+          SHORT=$(git rev-parse --short "$SHA")
+          COMMIT_URL="https://github.com/${REPO}/commit/${SHA}"
+
+          # PR URL (있을 때만)
+          PR_URL=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_URL="${{ github.event.pull_request.html_url }}"
+          fi
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "short=$SHORT" >> $GITHUB_OUTPUT
+          echo "commit_url=$COMMIT_URL" >> $GITHUB_OUTPUT
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Clone Wiki (.wiki.git)
+        shell: bash
+        run: |
+          set -e
+          WIKI_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git"
+          git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
+          mkdir -p "_wiki/스터디로그"
+
+      - name: Copy changed files & inject metadata
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="${{ steps.meta.outputs.branch }}"
+          SHORT="${{ steps.meta.outputs.short }}"
+          COMMIT_URL="${{ steps.meta.outputs.commit_url }}"
+          PR_URL="${{ steps.meta.outputs.pr_url }}"
+
+          # changed.zlist는 NUL 구분자
+          if [ ! -s changed.zlist ]; then
+            echo "No changed studylog files detected."
+          else
+            # 파일별로 메타 치환하여 위키에 반영
+            while IFS= read -r -d '' FILE; do
+              [ -z "$FILE" ] && continue
+              BASENAME="$(basename "$FILE")"
+              DEST="_wiki/스터디로그/$BASENAME"
+
+              # 원문 읽어서 플레이스홀더 치환
+              CONTENT="$(cat "$FILE")"
+              REL_PATH="$FILE"
+
+              # 토큰 치환
+              CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
+              CONTENT="${CONTENT//\{\{COMMIT_SHORT\}\}/$SHORT}"
+              CONTENT="${CONTENT//\{\{COMMIT_URL\}\}/$COMMIT_URL}"
+              CONTENT="${CONTENT//\{\{PR_URL\}\}/$PR_URL}"
+              CONTENT="${CONTENT//\{\{REL_PATH\}\}/$REL_PATH}"
+
+              printf "%s" "$CONTENT" > "$DEST"
+              echo "Synced: $DEST"
+            done < changed.zlist
+          fi
+
+      - name: Rebuild Wiki Home grouped by FE/BE/Misc
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INDEX="_wiki/Home.md"
+          INDEX_FE="$(mktemp)"
+          INDEX_BE="$(mktemp)"
+          INDEX_MISC="$(mktemp)"
+
+          # Asia/Seoul 시간으로 타임스탬프
+          export TZ=Asia/Seoul
+          NOW="$(date '+%Y-%m-%d %H:%M %Z')"
+
+          # 목록 생성: 위키의 스터디로그 내 md 파일을 스캔 (파일명 기준 내림차순)
+          mapfile -t FILES < <(find "_wiki/스터디로그" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
+
+          for F in "${FILES[@]}"; do
+            TITLE="${F%.md}"
+
+            # 분류: 파일명 접두사로 판정
+            if [[ "$F" == \[FE\]* ]]; then
+              echo "- [[스터디로그/$TITLE]]" >> "$INDEX_FE"
+            elif [[ "$F" == \[BE\]* ]]; then
+              echo "- [[스터디로그/$TITLE]]" >> "$INDEX_BE"
+            else
+              echo "- [[스터디로그/$TITLE]]" >> "$INDEX_MISC"
+            fi
+          done
+
+          {
+            echo "# 📚 스터디 로그 (자동 인덱스)"
+            echo
+            echo "> 최신 업데이트: $NOW"
+            echo
+
+            if [ -s "$INDEX_FE" ]; then
+              echo "## 🖥️ Frontend"
+              cat "$INDEX_FE"
+              echo
+            fi
+
+            if [ -s "$INDEX_BE" ]; then
+              echo "## ⚙️ Backend"
+              cat "$INDEX_BE"
+              echo
+            fi
+
+            if [ -s "$INDEX_MISC" ]; then
+              echo "## 📦 기타/공통"
+              cat "$INDEX_MISC"
+              echo
+            fi
+          } > "$INDEX"
+
+          echo "Home.md rebuilt."
+
+      - name: Commit & push to Wiki
+        shell: bash
+        run: |
+          set -e
+          cd _wiki
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .
+          if git diff --staged --quiet; then
+            echo "No wiki changes to commit."
+            exit 0
+          fi
+
+          MSG="docs(wiki): sync from ${GITHUB_REF_NAME} @ ${GITHUB_SHA:0:7}"
+          git commit -m "$MSG"
+          git push origin HEAD

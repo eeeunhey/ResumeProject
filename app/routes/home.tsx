@@ -1,3 +1,4 @@
+import { resumes } from "~/constants";
 import type { Route } from "./+types/home";
 import Navbar from "~/components/Navbar";
 
@@ -28,6 +29,12 @@ export default function Home() {
           </h2>
         </div>
       </section>
+
+      {resumes.map((resume) => (
+        <div>
+          <h1> {resume.jobTitle}</h1>
+        </div>
+      ))}
     </main>
   );
 }
