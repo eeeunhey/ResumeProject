@@ -95,6 +95,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
@@ -105,8 +109,12 @@ jobs:
 
           mapfile -t FILES < <(find "_wiki/STUDYLOG" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
 
+          urlencode () { jq -sRr @uri; }
+
           for F in "${FILES[@]}"; do
             TITLE="${F%.md}"
+            URL_ENC="$(printf "%s" "$TITLE" | urlencode)"  
+            
             if [[ "$F" == \[FE\]* ]]; then
               echo "- [[STUDYLOG/$TITLE]]" >> "$INDEX_FE"
             elif [[ "$F" == \[BE\]* ]]; then
