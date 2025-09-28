@@ -69,6 +69,8 @@ jobs:
           PR_URL: ${{ steps.meta.outputs.pr_url }}
         run: |
           set -euo pipefail
+
+          # 초기 채움: diff가 없으면 전체 스캔
           if [ ! -s changed.zlist ]; then
             echo "No diff found, syncing all md files"
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
@@ -79,7 +81,6 @@ jobs:
             BASENAME="$(basename "$FILE")"
             DEST="_wiki/STUDYLOG/$BASENAME"
 
-            # 내용 읽어서 토큰 치환
             CONTENT="$(cat "$FILE")"
             CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
             CONTENT="${CONTENT//\{\{COMMIT_SHORT\}\}/$SHORT}"
@@ -91,11 +92,12 @@ jobs:
             echo "[ok] synced: $DEST"
           done < changed.zlist
 
-      - name: Rebuild Wiki Home (FE/BE/Misc)
+      - name: Rebuild Wiki Home (FE/BE/Misc) with safe links
         shell: bash
         run: |
           set -euo pipefail
 
+          # URL 인코딩 도구
           sudo apt-get update -y
           sudo apt-get install -y jq
 
@@ -112,15 +114,17 @@ jobs:
           urlencode () { jq -sRr @uri; }
 
           for F in "${FILES[@]}"; do
-            TITLE="${F%.md}"
-            URL_ENC="$(printf "%s" "$TITLE" | urlencode)"  
-            
+            TITLE="${F%.md}"                              # 표시용 제목
+            URL_ENC="$(printf "%s" "$TITLE" | urlencode)" # 링크용 경로(대괄호/공백 안전)
+
+            LINE="- [${TITLE}](STUDYLOG/${URL_ENC})"
+
             if [[ "$F" == \[FE\]* ]]; then
-              echo "- [[STUDYLOG/$TITLE]]" >> "$INDEX_FE"
+              echo "$LINE" >> "$INDEX_FE"
             elif [[ "$F" == \[BE\]* ]]; then
-              echo "- [[STUDYLOG/$TITLE]]" >> "$INDEX_BE"
+              echo "$LINE" >> "$INDEX_BE"
             else
-              echo "- [[STUDYLOG/$TITLE]]" >> "$INDEX_MISC"
+              echo "$LINE" >> "$INDEX_MISC"
             fi
           done
 
