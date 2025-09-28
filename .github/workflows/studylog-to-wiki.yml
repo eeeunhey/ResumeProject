@@ -1,4 +1,4 @@
-name: Sync STUDYLOG to Wiki (root FE-/BE- slugs, solid links)
+name: Sync STUDYLOG to Wiki (root FE-/BE- slugs + markdown links)
 
 on:
   workflow_dispatch:
@@ -71,11 +71,12 @@ jobs:
           export LANG=C.UTF-8
           export LC_ALL=C.UTF-8
 
+          # diff 없으면 전체 동기화
           if [ ! -s changed.zlist ]; then
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
-          # "제목"을 안전한 슬러그로 변환
+          # 위험 문자 정리: [] 제거, .→-, 공백→-, 비영숫자→-, 연속 - 정리
           sanitize_core () {
             printf "%s" "$1" \
               | sed -E 's/[\[\]]//g; s/[.]/-/g; s/[[:space:]]+/-/g; s/[^[:alnum:]_-]/-/g; s/-+/-/g; s/^-//; s/-$//'
@@ -102,7 +103,7 @@ jobs:
             fi
 
             CORE_SAFE="$(sanitize_core "$CORE")"
-            DEST="_wiki/${CAT}-${CORE_SAFE}.md"   # ← 루트에 저장
+            DEST="_wiki/${CAT}-${CORE_SAFE}.md"   # 루트 저장 (폴더 X)
 
             CONTENT="$(cat "$FILE")"
             CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
@@ -120,14 +121,12 @@ jobs:
         run: |
           set -euo pipefail
           cd _wiki
-          # 예전 하위 폴더 구조 제거
           rm -rf FE BE STUDYLOG || true
-          # 대괄호가 이름에 남아있는 루트 페이지 제거
           find . -maxdepth 1 -type f -name "[[]FE[]]*.md" -delete || true
           find . -maxdepth 1 -type f -name "[[]BE[]]*.md" -delete || true
           cd -
 
-      - name: Rebuild Home (links → [[FE-slug|[FE] Title]])
+      - name: Rebuild Home (Markdown links with labels)
         shell: bash
         run: |
           set -euo pipefail
@@ -137,10 +136,12 @@ jobs:
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
+
+          REPO="${{ github.repository }}"
           export TZ=Asia/Seoul
           NOW="$(date '+%Y-%m-%d %H:%M %Z')"
 
-          # 제목: 문서의 첫 H1 사용, 없으면 파일명
+          # 문서의 첫 H1을 제목으로, 없으면 파일명 사용
           get_title () {
             local path="$1"
             local t
@@ -151,15 +152,18 @@ jobs:
             printf "%s" "$t"
           }
 
+          # 루트의 FE-/BE- 슬러그 문서들만 대상으로
           mapfile -t ROOTS < <(find "_wiki" -maxdepth 1 -type f -name "*.md" ! -name "Home.md" -printf "%f\n" | sort -r)
 
           for F in "${ROOTS[@]}"; do
-            T="$(get_title "_wiki/$F")"
             SLUG="${F%.md}"
+            TITLE="$(get_title "_wiki/$F")"
+            URL="https://github.com/${REPO}/wiki/${SLUG}"   # 절대 URL로 안정 링크
+
             if [[ "$SLUG" == FE-* ]]; then
-              echo "- [[${SLUG}|[FE] ${T}]]" >> "$INDEX_FE"
+              echo "- **[FE]** [${TITLE}](${URL})" >> "$INDEX_FE"
             elif [[ "$SLUG" == BE-* ]]; then
-              echo "- [[${SLUG}|[BE] ${T}]]" >> "$INDEX_BE"
+              echo "- **[BE]** [${TITLE}](${URL})" >> "$INDEX_BE"
             fi
           done
 
