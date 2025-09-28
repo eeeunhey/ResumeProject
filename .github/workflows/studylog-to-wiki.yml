@@ -1,4 +1,4 @@
-name: Sync STUDYLOG to Wiki (FE/BE sections, safe links)
+name: Sync STUDYLOG to Wiki (FE/BE, no misc, direct pages)
 
 on:
   workflow_dispatch:
@@ -58,9 +58,9 @@ jobs:
           set -e
           WIKI_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/eeeunhey/ResumeProject.wiki.git"
           git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
-          mkdir -p "_wiki/STUDYLOG"
+          mkdir -p "_wiki/FE" "_wiki/BE"
 
-      - name: Copy files → sanitize filename → inject metadata (pure bash)
+      - name: Copy files → sanitize filename → inject metadata (bash only)
         shell: bash
         env:
           BRANCH: ${{ steps.meta.outputs.branch }}
@@ -70,34 +70,41 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 초기 채움: diff가 없으면 전체 스캔
+          # 초기 채움: diff 없으면 전체 스캔
           if [ ! -s changed.zlist ]; then
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
-          sanitize() {
-            # 1) 확장자 제거
-            local name_no_ext="${1%.md}"
-            # 2) 접두사 추출 ([FE] / [BE])
-            local cat=""
-            if [[ "$name_no_ext" == \[FE\]* ]]; then cat="FE"; fi
-            if [[ "$name_no_ext" == \[BE\]* ]]; then cat="BE"; fi
-            # 3) 위험 문자 제거/치환: 맨 앞 [FE]/[BE] 제거, 대괄호 삭제, . → -, 공백 → -, 연속 - 정리
-            local core="$name_no_ext"
-            core="$(printf "%s" "$core" | sed -E 's/^\[(FE|BE)\][[:space:]]*//; s/[\\[\\]]//g; s/\\./-/g; s/[[:space:]]+/-/g; s/[^A-Za-z0-9가-힣_-]/-/g; s/-+/-/g')"
-            if [ -n "$cat" ]; then
-              core="${cat}-${core}"
-            fi
-            echo "${core}.md"
+          sanitize_core () {
+            # 위험 문자 제거/치환: 대괄호 삭제, 점을 -, 공백을 -, 이외는 안전군만 유지
+            printf "%s" "$1" \
+              | sed -E 's/[\\[\\]]//g; s/\\./-/g; s/[[:space:]]+/-/g; s/[^A-Za-z0-9가-힣_-]/-/g; s/-+/-/g; s/^-//; s/-$//'
           }
 
           while IFS= read -r -d '' FILE; do
             [ -z "$FILE" ] && continue
-            BASENAME="$(basename "$FILE")"
-            SAFE_BASENAME="$(sanitize "$BASENAME")"         # 예: FE-Home-tsx-셋팅.md
-            DEST="_wiki/STUDYLOG/$SAFE_BASENAME"
+            BASE="$(basename "$FILE" .md)"
 
-            # 내용 읽어 토큰 치환
+            # 카테고리 판정
+            CAT=""
+            CORE="$BASE"
+            if [[ "$BASE" == \[FE\]* ]]; then
+              CAT="FE"
+              CORE="$(printf "%s" "$BASE" | sed -E 's/^\[(FE)\][[:space:]]*//')"
+            elif [[ "$BASE" == \[BE\]* ]]; then
+              CAT="BE"
+              CORE="$(printf "%s" "$BASE" | sed -E 's/^\[(BE)\][[:space:]]*//')"
+            else
+              echo "[skip] no [FE]/[BE] prefix: $FILE"
+              continue
+            fi
+
+            CORE_SAFE="$(sanitize_core "$CORE")"
+            DEST_DIR="_wiki/$CAT"
+            DEST="$DEST_DIR/${CORE_SAFE}.md"
+
+            mkdir -p "$DEST_DIR"
+
             CONTENT="$(cat "$FILE")"
             CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
             CONTENT="${CONTENT//\{\{COMMIT_SHORT\}\}/$SHORT}"
@@ -106,25 +113,21 @@ jobs:
             CONTENT="${CONTENT//\{\{REL_PATH\}\}/$FILE}"
 
             printf "%s\n" "$CONTENT" > "$DEST"
-            echo "[ok] copied: $FILE  ->  $DEST"
+            echo "[ok] $FILE  →  $DEST"
           done < changed.zlist
 
-      - name: Rebuild Home (FE/BE/Misc) with working links
+      - name: Rebuild Home (FE/BE — no misc)
         shell: bash
         run: |
           set -euo pipefail
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
-          INDEX_MISC="$(mktemp)"
 
           export TZ=Asia/Seoul
           NOW="$(date '+%Y-%m-%d %H:%M %Z')"
 
-          # 위키 폴더(안전 파일명) 기준으로 목록 생성
-          mapfile -t FILES < <(find "_wiki/STUDYLOG" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
-
-          # 표시용 제목: 문서의 첫 번째 H1(# ) 라인을 우선 사용, 없으면 파일명(확장자 제거)
+          # 제목: 문서의 첫 H1 사용, 없으면 파일명
           get_title () {
             local path="$1"
             local t
@@ -135,17 +138,17 @@ jobs:
             printf "%s" "$t"
           }
 
-          for F in "${FILES[@]}"; do
-            TITLE="$(get_title "_wiki/STUDYLOG/$F")"
-            LINE="- [${TITLE}](STUDYLOG/${F})"    # ← .md까지 직접 링크 (확실하게 열림)
+          mapfile -t FES < <(find "_wiki/FE" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
+          mapfile -t BES < <(find "_wiki/BE" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
 
-            if [[ "$F" == FE-* ]]; then
-              echo "$LINE" >> "$INDEX_FE"
-            elif [[ "$F" == BE-* ]]; then
-              echo "$LINE" >> "$INDEX_BE"
-            else
-              echo "$LINE" >> "$INDEX_MISC"
-            fi
+          for F in "${FES[@]}"; do
+            T="$(get_title "_wiki/FE/$F")"
+            echo "- [${T}](FE/${F})" >> "$INDEX_FE"
+          done
+
+          for F in "${BES[@]}"; do
+            T="$(get_title "_wiki/BE/$F")"
+            echo "- [${T}](BE/${F})" >> "$INDEX_BE"
           done
 
           {
@@ -160,10 +163,6 @@ jobs:
             if [ -s "$INDEX_BE" ]; then
               echo "## ⚙️ Backend"
               cat "$INDEX_BE"; echo
-            fi
-            if [ -s "$INDEX_MISC" ]; then
-              echo "## 📦 기타/공통"
-              cat "$INDEX_MISC"; echo
             fi
           } > "$INDEX"
 
