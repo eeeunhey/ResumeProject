@@ -1,7 +1,9 @@
-export const resumes: {}[] = [
+
+
+export const resumes: Resume[] = [
   {
     id: "1",
-    companyName: "Google",
+    companyName: "카카오",
     jobTitle: "Frontend Developer",
     imagePath: "/images/resume-1.png",
     resumePath: "/resumes/resume-1.pdf",
@@ -31,7 +33,7 @@ export const resumes: {}[] = [
   },
   {
     id: "2",
-    companyName: "Microsoft",
+    companyName: "쿠팡",
     jobTitle: "Cloud Engineer",
     imagePath: "/images/resume-2.png",
     resumePath: "/resumes/resume-2.pdf",
@@ -61,7 +63,7 @@ export const resumes: {}[] = [
   },
   {
     id: "3",
-    companyName: "Apple",
+    companyName: "네이버",
     jobTitle: "iOS Developer",
     imagePath: "/images/resume-3.png",
     resumePath: "/resumes/resume-3.pdf",

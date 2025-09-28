@@ -1,6 +1,7 @@
 import { resumes } from "~/constants";
 import type { Route } from "./+types/home";
 import Navbar from "~/components/Navbar";
+import ResumeCard from "~/components/ResumeCard";
 
 // 타입을 가져오는데 라우트라는 타입 설명서만 가져온다
 // ./+types/home : home.tsx 라는 라우트 파일이 있으면 거기에 맞춰서 생성된다함
@@ -30,11 +31,15 @@ export default function Home() {
         </div>
       </section>
 
-      {resumes.map((resume) => (
-        <div>
-          <h1> {resume.jobTitle}</h1>
-        </div>
-      ))}
+    {resumes.length > 0 && (
+      <div>
+        {resumes.map((resume) => (
+          <ResumeCard key={resume.id} resume={resume} />
+        ))}
+      </div>
+    )}
+
+
     </main>
   );
 }
