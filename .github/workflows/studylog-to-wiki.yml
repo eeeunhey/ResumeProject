@@ -1,13 +1,13 @@
 name: Sync STUDYLOG to Wiki (FE/BE sections)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "STUDYLOG/**"
   pull_request:
-    branches: ["**"]
+    branches: [ "**" ]
     paths:
       - "STUDYLOG/**"
 
@@ -29,18 +29,18 @@ jobs:
         id: diff
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.sha }}"
-          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             git ls-files -z 'STUDYLOG/**/*.md' > changed.zlist || true
           else
-            git diff --name-only -z "${BEFORE}" "${AFTER}" -- 'STUDYLOG/**/*.md' > changed.zlist || true
+            git diff --name-only -z "$BEFORE" "$AFTER" -- 'STUDYLOG/**/*.md' > changed.zlist || true
           fi
           tr '\0' '\n' < changed.zlist | tee changed.txt
-          echo "changed<<EOF" >> "$GITHUB_OUTPUT"
-          cat changed.txt >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "changed<<EOF" >> $GITHUB_OUTPUT
+          cat changed.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Collect metadata
         id: meta
@@ -48,32 +48,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "short=$(git rev-parse --short ${{ github.sha }})" >> "$GITHUB_OUTPUT"
-          echo "commit_url=https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
+          echo "commit_url=https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> $GITHUB_OUTPUT
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "pr_url=${{ github.event.pull_request.html_url }}" >> "$GITHUB_OUTPUT"
+            echo "pr_url=${{ github.event.pull_request.html_url }}" >> $GITHUB_OUTPUT
           else
-            echo "pr_url=" >> "$GITHUB_OUTPUT"
+            echo "pr_url=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clone target Wiki (.wiki.git)
+      - name: Clone your Wiki (.wiki.git)
         shell: bash
-        env:
-          WIKI_PAT: ${{ secrets.WIKI_PAT }}               # ← 있으면 PAT 사용
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}           # ← 없으면 GITHUB_TOKEN 사용(같은 레포의 위키일 때만 유효)
         run: |
-          set -euo pipefail
-          if [ -n "${WIKI_PAT:-}" ]; then
-            AUTH="${WIKI_PAT}"
-          else
-            AUTH="x-access-token:${GH_TOKEN}"
-          fi
-          # ⬇ 요청하신 위키 주소 고정
-          WIKI_URL="https://${AUTH}@github.com/eeeunhey/ResumeProject.wiki.git"
-
-          git clone "${WIKI_URL}" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "${WIKI_URL}")
+          set -e
+          WIKI_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/eeeunhey/ResumeProject.wiki.git"
+          git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
           mkdir -p "_wiki/STUDYLOG"
 
       - name: Copy changed files & inject metadata (robust)
@@ -89,55 +78,56 @@ jobs:
           export LC_ALL=C.UTF-8
           mkdir -p "_wiki/STUDYLOG"
 
-          # 초기 채움: changed.zlist가 비면 전체 스캔
           if [ ! -s changed.zlist ]; then
             echo "No diff found, syncing all md files"
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
-          python3 - <<'PY'
-            import os, pathlib, shutil
+          cat > sync_studylog.py <<'PY'
+import os, pathlib, shutil
 
-            wiki_dir = pathlib.Path("_wiki/STUDYLOG")
-            changed = pathlib.Path("changed.zlist")
+wiki_dir = pathlib.Path("_wiki/STUDYLOG")
+changed = pathlib.Path("changed.zlist")
 
-            BRANCH = os.environ.get("BRANCH","")
-            SHORT = os.environ.get("SHORT","")
-            COMMIT_URL = os.environ.get("COMMIT_URL","")
-            PR_URL = os.environ.get("PR_URL","")
+BRANCH = os.environ.get("BRANCH","")
+SHORT = os.environ.get("SHORT","")
+COMMIT_URL = os.environ.get("COMMIT_URL","")
+PR_URL = os.environ.get("PR_URL","")
 
-          def inject(text: str, src: pathlib.Path) -> str:
-              return (text
-                  .replace("{{BRANCH_NAME}}", BRANCH)
-                  .replace("{{COMMIT_SHORT}}", SHORT)
-                  .replace("{{COMMIT_URL}}", COMMIT_URL)
-                  .replace("{{PR_URL}}", PR_URL)
-                  .replace("{{REL_PATH}}", str(src).replace("\\","/"))
-              )
+def inject(text: str, src: pathlib.Path) -> str:
+    return (text
+        .replace("{{BRANCH_NAME}}", BRANCH)
+        .replace("{{COMMIT_SHORT}}", SHORT)
+        .replace("{{COMMIT_URL}}", COMMIT_URL)
+        .replace("{{PR_URL}}", PR_URL)
+        .replace("{{REL_PATH}}", str(src).replace("\\","/"))
+    )
 
-          if changed.exists():
-              parts = changed.read_bytes().split(b"\x00")
-              for raw in parts:
-                  if not raw:
-                      continue
-                  src = pathlib.Path(raw.decode("utf-8", errors="ignore"))
-                  if not src.exists():
-                      print("[skip] not found:", src)
-                      continue
-                  dest = wiki_dir / src.name
-                  try:
-                      text = src.read_text(encoding="utf-8", errors="ignore")
-                  except Exception as e:
-                      print("[warn] read fail:", src, e)
-                      text = ""
-                  injected = inject(text, src)
-                  if injected.strip() == "":
-                      print("[fallback] copy raw:", src, "->", dest)
-                      shutil.copyfile(src, dest)
-                  else:
-                      dest.write_text(injected, encoding="utf-8")
-                      print("[ok] synced:", dest, len(injected), "bytes")
-          PY
+if changed.exists():
+    parts = changed.read_bytes().split(b"\x00")
+    for raw in parts:
+        if not raw:
+            continue
+        src = pathlib.Path(raw.decode("utf-8", errors="ignore"))
+        if not src.exists():
+            print("[skip] not found:", src)
+            continue
+        dest = wiki_dir / src.name
+        try:
+            text = src.read_text(encoding="utf-8", errors="ignore")
+        except Exception as e:
+            print("[warn] read fail:", src, e)
+            text = ""
+        injected = inject(text, src)
+        if injected.strip() == "":
+            print("[fallback] copy raw:", src, "->", dest)
+            shutil.copyfile(src, dest)
+        else:
+            dest.write_text(injected, encoding="utf-8")
+            print("[ok] synced:", dest, len(injected), "bytes")
+PY
+
+          python3 sync_studylog.py
 
       - name: Rebuild Wiki Home (FE/BE/Misc)
         shell: bash
@@ -186,7 +176,7 @@ jobs:
       - name: Commit & push to Wiki
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
           cd _wiki
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
