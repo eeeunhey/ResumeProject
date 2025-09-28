@@ -1,13 +1,13 @@
-name: Sync STUDYLOG to Wiki (FE/BE sections)
+name: Sync STUDYLOG to Wiki (FE/BE sections, safe links)
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
     paths:
       - "STUDYLOG/**"
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
     paths:
       - "STUDYLOG/**"
 
@@ -52,7 +52,7 @@ jobs:
             echo "pr_url=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clone your Wiki (.wiki.git)
+      - name: Clone Wiki (.wiki.git)
         shell: bash
         run: |
           set -e
@@ -60,11 +60,11 @@ jobs:
           git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
           mkdir -p "_wiki/STUDYLOG"
 
-      - name: Copy changed files & inject metadata (bash only)
+      - name: Copy files → sanitize filename → inject metadata (pure bash)
         shell: bash
         env:
           BRANCH: ${{ steps.meta.outputs.branch }}
-          SHORT: ${{ steps.meta.outputs.short }}
+          SHORT:  ${{ steps.meta.outputs.short }}
           COMMIT_URL: ${{ steps.meta.outputs.commit_url }}
           PR_URL: ${{ steps.meta.outputs.pr_url }}
         run: |
@@ -72,15 +72,32 @@ jobs:
 
           # 초기 채움: diff가 없으면 전체 스캔
           if [ ! -s changed.zlist ]; then
-            echo "No diff found, syncing all md files"
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
+
+          sanitize() {
+            # 1) 확장자 제거
+            local name_no_ext="${1%.md}"
+            # 2) 접두사 추출 ([FE] / [BE])
+            local cat=""
+            if [[ "$name_no_ext" == \[FE\]* ]]; then cat="FE"; fi
+            if [[ "$name_no_ext" == \[BE\]* ]]; then cat="BE"; fi
+            # 3) 위험 문자 제거/치환: 맨 앞 [FE]/[BE] 제거, 대괄호 삭제, . → -, 공백 → -, 연속 - 정리
+            local core="$name_no_ext"
+            core="$(printf "%s" "$core" | sed -E 's/^\[(FE|BE)\][[:space:]]*//; s/[\\[\\]]//g; s/\\./-/g; s/[[:space:]]+/-/g; s/[^A-Za-z0-9가-힣_-]/-/g; s/-+/-/g')"
+            if [ -n "$cat" ]; then
+              core="${cat}-${core}"
+            fi
+            echo "${core}.md"
+          }
 
           while IFS= read -r -d '' FILE; do
             [ -z "$FILE" ] && continue
             BASENAME="$(basename "$FILE")"
-            DEST="_wiki/STUDYLOG/$BASENAME"
+            SAFE_BASENAME="$(sanitize "$BASENAME")"         # 예: FE-Home-tsx-셋팅.md
+            DEST="_wiki/STUDYLOG/$SAFE_BASENAME"
 
+            # 내용 읽어 토큰 치환
             CONTENT="$(cat "$FILE")"
             CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
             CONTENT="${CONTENT//\{\{COMMIT_SHORT\}\}/$SHORT}"
@@ -89,18 +106,13 @@ jobs:
             CONTENT="${CONTENT//\{\{REL_PATH\}\}/$FILE}"
 
             printf "%s\n" "$CONTENT" > "$DEST"
-            echo "[ok] synced: $DEST"
+            echo "[ok] copied: $FILE  ->  $DEST"
           done < changed.zlist
 
-      - name: Rebuild Wiki Home (FE/BE/Misc) with safe links
+      - name: Rebuild Home (FE/BE/Misc) with working links
         shell: bash
         run: |
           set -euo pipefail
-
-          # URL 인코딩 도구
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
@@ -109,19 +121,27 @@ jobs:
           export TZ=Asia/Seoul
           NOW="$(date '+%Y-%m-%d %H:%M %Z')"
 
+          # 위키 폴더(안전 파일명) 기준으로 목록 생성
           mapfile -t FILES < <(find "_wiki/STUDYLOG" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
 
-          urlencode () { jq -sRr @uri; }
+          # 표시용 제목: 문서의 첫 번째 H1(# ) 라인을 우선 사용, 없으면 파일명(확장자 제거)
+          get_title () {
+            local path="$1"
+            local t
+            t="$(grep -m1 -E '^# ' "$path" | sed -E 's/^# +//')"
+            if [ -z "$t" ]; then
+              t="$(basename "$path" .md)"
+            fi
+            printf "%s" "$t"
+          }
 
           for F in "${FILES[@]}"; do
-            TITLE="${F%.md}"                              # 표시용 제목
-            URL_ENC="$(printf "%s" "$TITLE" | urlencode)" # 링크용 경로(대괄호/공백 안전)
+            TITLE="$(get_title "_wiki/STUDYLOG/$F")"
+            LINE="- [${TITLE}](STUDYLOG/${F})"    # ← .md까지 직접 링크 (확실하게 열림)
 
-            LINE="- [${TITLE}](STUDYLOG/${URL_ENC})"
-
-            if [[ "$F" == \[FE\]* ]]; then
+            if [[ "$F" == FE-* ]]; then
               echo "$LINE" >> "$INDEX_FE"
-            elif [[ "$F" == \[BE\]* ]]; then
+            elif [[ "$F" == BE-* ]]; then
               echo "$LINE" >> "$INDEX_BE"
             else
               echo "$LINE" >> "$INDEX_MISC"
