@@ -69,23 +69,25 @@ jobs:
           PR_URL: ${{ steps.meta.outputs.pr_url }}
         run: |
           set -euo pipefail
+          export LANG=C.UTF-8
+          export LC_ALL=C.UTF-8
 
           # 초기 채움: diff 없으면 전체 스캔
           if [ ! -s changed.zlist ]; then
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
+          # 위험 문자 제거/치환: 대괄호 삭제, 점(.)→- , 공백→- , 그 외는 비영숫자 전부 -
           sanitize_core () {
-            # 위험 문자 제거/치환: 대괄호 삭제, 점을 -, 공백을 -, 이외는 안전군만 유지
             printf "%s" "$1" \
-              | sed -E 's/[\\[\\]]//g; s/\\./-/g; s/[[:space:]]+/-/g; s/[^A-Za-z0-9가-힣_-]/-/g; s/-+/-/g; s/^-//; s/-$//'
+              | sed -E 's/[\[\]]//g; s/[.]/-/g; s/[[:space:]]+/-/g; s/[^[:alnum:]_-]/-/g; s/-+/-/g; s/^-//; s/-$//'
           }
 
           while IFS= read -r -d '' FILE; do
             [ -z "$FILE" ] && continue
             BASE="$(basename "$FILE" .md)"
 
-            # 카테고리 판정
+            # 카테고리 판정 + 접두사 제거
             CAT=""
             CORE="$BASE"
             if [[ "$BASE" == \[FE\]* ]]; then
@@ -102,7 +104,6 @@ jobs:
             CORE_SAFE="$(sanitize_core "$CORE")"
             DEST_DIR="_wiki/$CAT"
             DEST="$DEST_DIR/${CORE_SAFE}.md"
-
             mkdir -p "$DEST_DIR"
 
             CONTENT="$(cat "$FILE")"
@@ -120,6 +121,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export LANG=C.UTF-8
+          export LC_ALL=C.UTF-8
+
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
