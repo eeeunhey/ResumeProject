@@ -38,15 +38,10 @@ jobs:
             git diff --name-only -z "$BEFORE" "$AFTER" -- 'STUDYLOG/**/*.md' > changed.zlist || true
           fi
           tr '\0' '\n' < changed.zlist | tee changed.txt
-          echo "changed<<EOF" >> $GITHUB_OUTPUT
-          cat changed.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Collect metadata
         id: meta
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           echo "short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
@@ -65,7 +60,7 @@ jobs:
           git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
           mkdir -p "_wiki/STUDYLOG"
 
-      - name: Copy changed files & inject metadata (robust)
+      - name: Copy changed files & inject metadata (bash only)
         shell: bash
         env:
           BRANCH: ${{ steps.meta.outputs.branch }}
@@ -74,60 +69,27 @@ jobs:
           PR_URL: ${{ steps.meta.outputs.pr_url }}
         run: |
           set -euo pipefail
-          export LANG=C.UTF-8
-          export LC_ALL=C.UTF-8
-          mkdir -p "_wiki/STUDYLOG"
-
           if [ ! -s changed.zlist ]; then
             echo "No diff found, syncing all md files"
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
-          cat > sync_studylog.py <<'PY'
-import os, pathlib, shutil
+          while IFS= read -r -d '' FILE; do
+            [ -z "$FILE" ] && continue
+            BASENAME="$(basename "$FILE")"
+            DEST="_wiki/STUDYLOG/$BASENAME"
 
-wiki_dir = pathlib.Path("_wiki/STUDYLOG")
-changed = pathlib.Path("changed.zlist")
+            # 내용 읽어서 토큰 치환
+            CONTENT="$(cat "$FILE")"
+            CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
+            CONTENT="${CONTENT//\{\{COMMIT_SHORT\}\}/$SHORT}"
+            CONTENT="${CONTENT//\{\{COMMIT_URL\}\}/$COMMIT_URL}"
+            CONTENT="${CONTENT//\{\{PR_URL\}\}/$PR_URL}"
+            CONTENT="${CONTENT//\{\{REL_PATH\}\}/$FILE}"
 
-BRANCH = os.environ.get("BRANCH","")
-SHORT = os.environ.get("SHORT","")
-COMMIT_URL = os.environ.get("COMMIT_URL","")
-PR_URL = os.environ.get("PR_URL","")
-
-def inject(text: str, src: pathlib.Path) -> str:
-    return (text
-        .replace("{{BRANCH_NAME}}", BRANCH)
-        .replace("{{COMMIT_SHORT}}", SHORT)
-        .replace("{{COMMIT_URL}}", COMMIT_URL)
-        .replace("{{PR_URL}}", PR_URL)
-        .replace("{{REL_PATH}}", str(src).replace("\\","/"))
-    )
-
-if changed.exists():
-    parts = changed.read_bytes().split(b"\x00")
-    for raw in parts:
-        if not raw:
-            continue
-        src = pathlib.Path(raw.decode("utf-8", errors="ignore"))
-        if not src.exists():
-            print("[skip] not found:", src)
-            continue
-        dest = wiki_dir / src.name
-        try:
-            text = src.read_text(encoding="utf-8", errors="ignore")
-        except Exception as e:
-            print("[warn] read fail:", src, e)
-            text = ""
-        injected = inject(text, src)
-        if injected.strip() == "":
-            print("[fallback] copy raw:", src, "->", dest)
-            shutil.copyfile(src, dest)
-        else:
-            dest.write_text(injected, encoding="utf-8")
-            print("[ok] synced:", dest, len(injected), "bytes")
-PY
-
-          python3 sync_studylog.py
+            printf "%s\n" "$CONTENT" > "$DEST"
+            echo "[ok] synced: $DEST"
+          done < changed.zlist
 
       - name: Rebuild Wiki Home (FE/BE/Misc)
         shell: bash
