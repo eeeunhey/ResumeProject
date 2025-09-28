@@ -1,4 +1,4 @@
-name: Sync STUDYLOG to Wiki (FE/BE, clean links + labels)
+name: Sync STUDYLOG to Wiki (root FE-/BE- slugs, solid links)
 
 on:
   workflow_dispatch:
@@ -58,9 +58,8 @@ jobs:
           set -e
           WIKI_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/eeeunhey/ResumeProject.wiki.git"
           git clone "$WIKI_URL" _wiki || (mkdir -p _wiki && cd _wiki && git init && git remote add origin "$WIKI_URL")
-          mkdir -p "_wiki/FE" "_wiki/BE"
 
-      - name: Copy → sanitize filename → inject metadata (bash only)
+      - name: Copy → sanitize filename → inject metadata (root FE-/BE-)
         shell: bash
         env:
           BRANCH: ${{ steps.meta.outputs.branch }}
@@ -72,16 +71,17 @@ jobs:
           export LANG=C.UTF-8
           export LC_ALL=C.UTF-8
 
-          # 초기 채움: diff 없으면 전체 스캔
           if [ ! -s changed.zlist ]; then
             find STUDYLOG -type f -name "*.md" -print0 > changed.zlist || true
           fi
 
-          # 위험 문자 제거/치환: 대괄호 삭제, 점→-, 공백→-, 비영숫자→-
+          # "제목"을 안전한 슬러그로 변환
           sanitize_core () {
             printf "%s" "$1" \
               | sed -E 's/[\[\]]//g; s/[.]/-/g; s/[[:space:]]+/-/g; s/[^[:alnum:]_-]/-/g; s/-+/-/g; s/^-//; s/-$//'
           }
+
+          mkdir -p _wiki
 
           while IFS= read -r -d '' FILE; do
             [ -z "$FILE" ] && continue
@@ -101,10 +101,8 @@ jobs:
               continue
             fi
 
-            CORE_SAFE="$(sanitize_core "$CORE")"   # 파일명 슬러그
-            DEST_DIR="_wiki/$CAT"
-            DEST="$DEST_DIR/${CORE_SAFE}.md"
-            mkdir -p "$DEST_DIR"
+            CORE_SAFE="$(sanitize_core "$CORE")"
+            DEST="_wiki/${CAT}-${CORE_SAFE}.md"   # ← 루트에 저장
 
             CONTENT="$(cat "$FILE")"
             CONTENT="${CONTENT//\{\{BRANCH_NAME\}\}/$BRANCH}"
@@ -117,19 +115,19 @@ jobs:
             echo "[ok] $FILE  →  $DEST"
           done < changed.zlist
 
-      - name: Cleanup legacy root pages (once)
+      - name: Cleanup legacy subfolders & stray pages
         shell: bash
         run: |
           set -euo pipefail
           cd _wiki
-          rm -rf STUDYLOG || true
+          # 예전 하위 폴더 구조 제거
+          rm -rf FE BE STUDYLOG || true
+          # 대괄호가 이름에 남아있는 루트 페이지 제거
           find . -maxdepth 1 -type f -name "[[]FE[]]*.md" -delete || true
           find . -maxdepth 1 -type f -name "[[]BE[]]*.md" -delete || true
-          for f in FE/*.md; do bn="$(basename "$f")"; [ -f "$bn" ] && rm -f "$bn"; done
-          for f in BE/*.md; do bn="$(basename "$f")"; [ -f "$bn" ] && rm -f "$bn"; done
           cd -
 
-      - name: Rebuild Home (FE/BE — direct links with labels)
+      - name: Rebuild Home (links → [[FE-slug|[FE] Title]])
         shell: bash
         run: |
           set -euo pipefail
@@ -139,7 +137,6 @@ jobs:
           INDEX="_wiki/Home.md"
           INDEX_FE="$(mktemp)"
           INDEX_BE="$(mktemp)"
-
           export TZ=Asia/Seoul
           NOW="$(date '+%Y-%m-%d %H:%M %Z')"
 
@@ -154,19 +151,16 @@ jobs:
             printf "%s" "$t"
           }
 
-          mapfile -t FES < <(find "_wiki/FE" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
-          mapfile -t BES < <(find "_wiki/BE" -maxdepth 1 -type f -name "*.md" -printf "%f\n" | sort -r)
+          mapfile -t ROOTS < <(find "_wiki" -maxdepth 1 -type f -name "*.md" ! -name "Home.md" -printf "%f\n" | sort -r)
 
-          for F in "${FES[@]}"; do
-            T="$(get_title "_wiki/FE/$F")"
+          for F in "${ROOTS[@]}"; do
+            T="$(get_title "_wiki/$F")"
             SLUG="${F%.md}"
-            echo "- [[FE/${SLUG}|[FE] ${T}]]" >> "$INDEX_FE"   # ← 표시 텍스트에 [FE] 붙임
-          done
-
-          for F in "${BES[@]}"; do
-            T="$(get_title "_wiki/BE/$F")"
-            SLUG="${F%.md}"
-            echo "- [[BE/${SLUG}|[BE] ${T}]]" >> "$INDEX_BE"   # ← 표시 텍스트에 [BE] 붙임
+            if [[ "$SLUG" == FE-* ]]; then
+              echo "- [[${SLUG}|[FE] ${T}]]" >> "$INDEX_FE"
+            elif [[ "$SLUG" == BE-* ]]; then
+              echo "- [[${SLUG}|[BE] ${T}]]" >> "$INDEX_BE"
+            fi
           done
 
           {

@@ -1,0 +1,14 @@
+[
+  {
+    "key": "ctrl+alt+f",
+    "command": "editor.action.insertSnippet",
+    "when": "editorLangId == 'markdown'",
+    "args": { "name": "FE Studylog" }
+  },
+  {
+    "key": "ctrl+alt+b",
+    "command": "editor.action.insertSnippet",
+    "when": "editorLangId == 'markdown'",
+    "args": { "name": "BE Studylog" }
+  }
+]
