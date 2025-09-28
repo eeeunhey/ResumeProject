@@ -1,172 +1,322 @@
-1. npm create vite@latest .
-npm
-→ Node.js에서 쓰는 패키지 매니저 도구. 새로운 프로젝트를 만들거나, 라이브러리를 설치/관리할 때 사용해요.
+# Vite 프로젝트 생성 · 필수 패키지 · Home 레이아웃 정리 (확장판)
 
-create vite@latest
-→ vite라는 **프로젝트 생성 도구(create-vite)**를 실행하는 거예요.
-vite는 요즘 많이 쓰는 프론트엔드 개발 도구(개발 서버 + 번들러)예요. @latest는 "가장 최신 버전"을 쓰겠다는 뜻.
+> TL;DR Vite + React + Router v7로 초기 세팅하고, Tailwind/애니메이션 · 클래스 관리 · PDF 뷰어 · Zustand 전역 상태를 붙였다. Home에 `<main>`/`<section>` 시맨틱 구조를 적용해 레이아웃을 정리했다.
 
-. (점)
-→ 현재 디렉토리(폴더)에 바로 프로젝트를 만든다는 뜻이에요.
-만약 my-app처럼 폴더 이름을 쓰면 my-app이라는 새 폴더가 생기고, 그 안에 프로젝트가 생성돼요.
-.을 쓰면 지금 내가 있는 폴더에 바로 설치됩니다.
-
-### 선택하기
-React -> React Router V7
-React Router V7란?
-👉 React 앱에서 여러 화면을 오가도록(=라우팅) 도와주는 라이브러리예요.
-예를 들어 /login, /signup, /mypage 같은 URL 주소에 따라 서로 다른 컴포넌트를 보여줄 수 있죠.
-데이터 로딩/액션을 라우터 레벨에서 다룰 수 있고
-중첩 라우트 + 에러 처리가 더 직관적이고
-코드 스플리팅/SSR 지원이 강화됐습니다.
-
-npm install -D tw-animate-css
-🔎 명령어 구조
-
-npm install
-→ npm(패키지 매니저)로 어떤 라이브러리를 설치한다는 뜻.
-
--D (또는 --save-dev)
-→ 개발(Dev) 의존성으로 설치하겠다는 뜻이에요.
-개발할 때만 필요한 도구 → package.json의 devDependencies에 기록됩니다.
-예: 빌드/테스트용 라이브러리.
-
-실제 배포(프로덕션)에는 포함되지 않아요.
-tw-animate-css
-→ Tailwind CSS 플러그인 중 하나로, Animate.css
- (애니메이션 라이브러리)를 Tailwind 유틸리티 클래스처럼 쓸 수 있게 해주는 패키지예요.
-
-npm install clsx tailwind-merge pdfjs-dist zustand
-좋습니다 👍 말씀하신 네 가지 패키지를 하나씩 풀어서 설명해드릴게요. 이 네 개는 프론트엔드(특히 React + Tailwind) 개발에서 자주 같이 쓰이는 도구들이에요.
+| 필드 | 값 |
+| --- | --- |
+| 분류 | FE |
+| 브랜치 | {{BRANCH_NAME}} |
+| 커밋 | [{{COMMIT_SHORT}}]({{COMMIT_URL}}) |
+| 원본 코드 | `{{REL_PATH}}` |
+| PR | {{PR_URL}} |
 
 ---
 
-## 1. **clsx**
+## 1) `npm create vite@latest .`
+- **npm**: Node.js 패키지 매니저(프로젝트 생성/라이브러리 설치·관리).
+- **create vite@latest**: 최신 `create-vite`로 템플릿 생성.
+- **`.`(점)**: **현재 폴더**에 바로 프로젝트 생성. (`my-app`을 쓰면 새 폴더가 만들어짐)
 
-👉 **조건부 클래스 이름 관리 도구**
+### 권장 옵션
+- 템플릿: **React + TypeScript**
+- 라우터: **React Router v7**
 
-* TailwindCSS 같은 유틸리티 클래스는 문자열로 붙이는데, 조건부로 처리할 때 코드가 지저분해져요.
-* `clsx`는 `if/else` 없이 깔끔하게 클래스 합치기를 도와줍니다.
-
-```jsx
-import clsx from "clsx";
-
-function Button({ primary, disabled }) {
-  return (
-    <button
-      className={clsx(
-        "px-4 py-2 rounded",
-        primary && "bg-blue-500 text-white",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-    >
-      버튼
-    </button>
-  );
+### 기본 스크립트(생성 후)
+```json
+// package.json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  }
 }
 ```
 
-✔️ `primary`가 true면 파란색 버튼,
-✔️ `disabled`가 true면 회색 비활성화 버튼으로 자동 반영.
-
----
-
-## 2. **tailwind-merge**
-
-👉 **중복된 Tailwind 클래스 정리해주는 도구**
-
-* Tailwind에서는 같은 속성을 가진 클래스가 겹치면 마지막 게 적용돼요.
-* 그런데 여러 조건이 섞이면 `"px-2 px-4"` 같은 중복이 생길 수 있음.
-* `tailwind-merge`는 이런 걸 자동으로 **하나만 남겨줍니다.**
-
-```jsx
-import { twMerge } from "tailwind-merge";
-
-const button = twMerge("px-2 py-2 bg-blue-500", "px-4");
-// 결과: "py-2 bg-blue-500 px-4"
+### 자주 쓰는 명령
+```bash
+npm run dev      # http://localhost:5173
+npm run build
+npm run preview
 ```
 
-✔️ `px-2`와 `px-4`가 충돌하는데 → 최종적으로 `px-4`만 남음.
-→ `clsx`랑 같이 쓰면 `className` 관리가 완벽해져요.
-
 ---
 
-## 3. **pdfjs-dist**
+## 2) React Router v7 설치 & 설정
 
-👉 **브라우저에서 PDF 파일 읽기/렌더링 라이브러리**
-
-* Mozilla(파이어폭스 만든 회사)에서 만든 **PDF.js**의 npm 배포 버전이에요.
-* React에서 PDF 뷰어를 만들 때 많이 씁니다.
-
-```jsx
-import { pdfjs } from "pdfjs-dist";
-import "pdfjs-dist/web/pdf_viewer.css";
-
-async function loadPdf() {
-  const pdf = await pdfjs.getDocument("/example.pdf").promise;
-  const page = await pdf.getPage(1);
-
-  console.log("페이지 개수:", pdf.numPages);
-  console.log("첫 페이지 객체:", page);
-}
+### 설치
+```bash
+npm i react-router-dom
 ```
 
-✔️ PDF 파일을 로드하고, 페이지별로 캔버스에 그릴 수 있어요.
-✔️ 직접 뷰어를 만들 수도 있고, `react-pdf` 같은 라이브러리 내부에서도 `pdfjs-dist`를 씁니다.
+### 최소 라우팅 예제
+```tsx
+// src/main.tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Home from "./pages/Home";
 
----
+const router = createBrowserRouter([
+  { path: "/", element: <Home />, errorElement: <div>에러가 발생했어요 😵</div> }
+]);
 
-## 4. **zustand**
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>
+);
+```
 
-👉 **가볍고 심플한 React 상태 관리 라이브러리**
+### 중첩/레이아웃 라우트
+```tsx
+// src/routes.tsx
+import { Outlet } from "react-router-dom";
+import Home from "./pages/Home";
 
-* Redux처럼 복잡한 설정 필요 없음.
-* 전역 상태를 손쉽게 관리할 수 있어요.
-
-```jsx
-import { create } from "zustand";
-
-// 상태 정의
-const useStore = create((set) => ({
-  count: 0,
-  increase: () => set((state) => ({ count: state.count + 1 })),
-  reset: () => set({ count: 0 }),
-}));
-
-// 컴포넌트에서 사용
-function Counter() {
-  const { count, increase, reset } = useStore();
+function Layout() {
   return (
     <div>
-      <p>현재 값: {count}</p>
-      <button onClick={increase}>+1</button>
-      <button onClick={reset}>초기화</button>
+      <header className="p-4 border-b">헤더</header>
+      <main className="p-6"><Outlet /></main>
+    </div>
+  );
+}
+
+export const routes = [
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: "about", element: <div>About</div> }
+    ]
+  }
+];
+```
+
+---
+
+## 3) Tailwind + `tw-animate-css` 설정
+
+### 설치
+```bash
+npm i -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+npm i -D tw-animate-css
+```
+
+### `tailwind.config.js`
+```js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  theme: { extend: {} },
+  plugins: [require("tw-animate-css")]
+};
+```
+
+### 글로벌 CSS에 Tailwind 지시어
+```css
+/* src/index.css (또는 main.css) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+### 사용 예시
+> 플러그인 버전에 따라 클래스 접두가 다를 수 있어요. README 기준으로 사용하세요.
+```tsx
+<div className="animate__animated animate__fadeIn">페이드 인</div>
+{/* 또는 */}
+<div className="animate-fadeIn">페이드 인</div>
+```
+
+---
+
+## 4) `clsx` + `tailwind-merge` 같이 쓰기 (권장 패턴)
+
+### 설치
+```bash
+npm i clsx tailwind-merge
+```
+
+### `cn` 유틸 생성
+```ts
+// src/lib/cn.ts
+import { twMerge } from "tailwind-merge";
+import clsx, { ClassValue } from "clsx";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+### 사용 예시
+```tsx
+import { cn } from "@/lib/cn";
+
+<button className={cn("px-4 py-2 rounded px-2", true && "px-6", "bg-blue-500")}>
+  버튼
+</button>
+// 결과 className: "py-2 rounded bg-blue-500 px-6"
+```
+
+---
+
+## 5) `pdfjs-dist`(PDF.js) 기본 렌더링 (Vite용 워커 설정 포함)
+
+### 설치
+```bash
+npm i pdfjs-dist
+```
+
+### 워커 설정 + 1페이지 렌더
+Vite에서는 워커를 URL로 지정하는 방식이 간단해요.
+```tsx
+// src/components/PdfViewer.tsx
+import { useEffect, useRef } from "react";
+import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // ← Vite
+
+GlobalWorkerOptions.workerSrc = workerSrc;
+
+export default function PdfViewer() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    (async () => {
+      const loadingTask = getDocument("/example.pdf"); // public/example.pdf
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = canvasRef.current!;
+      const ctx = canvas.getContext("2d")!;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    })();
+  }, []);
+
+  return <canvas ref={canvasRef} className="border rounded" />;
+}
+```
+
+### 파일 위치
+- `public/example.pdf` 에 두면 `/example.pdf`로 접근 가능.
+
+> Note: React에서 손쉽게 쓰려면 `react-pdf`도 고려 가능. 위 예시는 **순수 pdfjs-dist**만 사용.
+
+---
+
+## 6) `zustand` 상태관리 (persist/devtools 포함)
+
+### 설치
+```bash
+npm i zustand
+```
+
+### 스토어
+```ts
+// src/stores/useCounter.ts
+import { create } from "zustand";
+import { persist, devtools } from "zustand/middleware";
+
+type State = { count: number };
+type Actions = {
+  inc: () => void;
+  reset: () => void;
+};
+
+export const useCounter = create<State & Actions>()(
+  devtools(
+    persist(
+      (set) => ({
+        count: 0,
+        inc: () => set((s) => ({ count: s.count + 1 })),
+        reset: () => set({ count: 0 }),
+      }),
+      { name: "counter" } // localStorage key
+    ),
+    { name: "CounterStore" }
+  )
+);
+```
+
+### 사용 (selector로 불필요 렌더 방지)
+```tsx
+import { useCounter } from "@/stores/useCounter";
+
+export default function Counter() {
+  const count = useCounter((s) => s.count);
+  const inc = useCounter((s) => s.inc);
+  const reset = useCounter((s) => s.reset);
+
+  return (
+    <div className="space-x-2">
+      <span>count: {count}</span>
+      <button onClick={inc} className="px-2 py-1 border rounded">+1</button>
+      <button onClick={reset} className="px-2 py-1 border rounded">reset</button>
     </div>
   );
 }
 ```
 
-✔️ `useStore`를 불러오면 어디서든 같은 상태를 공유 가능.
-✔️ Redux보다 코드가 훨씬 간단하고 가벼움.
+---
+
+## 7) Home 레이아웃: `<main>` / `<section>` 적용 (오탈자 수정 포함)
+
+```tsx
+// src/pages/Home.tsx
+import { cn } from "@/lib/cn";
+
+export default function Home() {
+  const container = cn("container mx-auto px-4", "px-6");
+
+  return (
+    <main className={container}>
+      <section className={cn("main-section", "py-6")}>
+        <div className="page-heading mb-4">
+          <h1 className="text-2xl font-bold">Home</h1>
+          <p className="text-sm text-gray-500">환영합니다 👋</p>
+        </div>
+
+        <div className="space-y-3">
+          <p>여기에 페이지 콘텐츠를 배치합니다.</p>
+        </div>
+      </section>
+    </main>
+  );
+}
+```
+
+> **주의:** `<sestion>` → `<section>` 으로 수정 ✅
 
 ---
 
-## ✅ 정리
+## 8) 트러블슈팅
 
-| 패키지                | 역할                             |
-| ------------------ | ------------------------------ |
-| **clsx**           | 조건부 Tailwind 클래스 이름을 깔끔하게 관리   |
-| **tailwind-merge** | 중복된 Tailwind 클래스 제거, 마지막 것만 남김 |
-| **pdfjs-dist**     | PDF 파일을 브라우저에서 읽고 렌더링하는 도구     |
-| **zustand**        | 간단하고 가벼운 React 전역 상태 관리 라이브러리  |
+- **Tailwind 클래스가 안 먹는다**  
+  - `tailwind.config.js`의 `content` 경로에 `./src/**/*.{ts,tsx}` 포함됐는지 확인  
+  - 글로벌 CSS에 `@tailwind` 세 줄 추가했는지 확인  
+- **tw-animate-css 클래스가 안 보인다**  
+  - `plugins: [require("tw-animate-css")]` 추가했는지  
+  - 플러그인 문서의 실제 클래스명 확인(예: `animate__fadeIn` vs `animate-fadeIn`)  
+- **PDF가 안 보인다**  
+  - 워커 경로 설정(`GlobalWorkerOptions.workerSrc`) 확인  
+  - 파일 경로 `/example.pdf`가 맞는지(빌드 후 `public/` 기준)  
+- **zustand가 매 렌더마다 다 그린다**  
+  - 셀렉터 사용(`useStore(s => s.some)`)  
+  - 불변 업데이트 유지(set에 함수형 업데이트 권장)
 
 ---
 
-
-
-home.tsx로 <main> 태그추가
-<sestion className="main-section">
-<div className="page-heading">
-</div>
-<sestion>
-</main>
+## 9) 오늘 작업 한 줄 요약 (TIL)
+- Vite + React + Router v7 기반 세팅
+- Tailwind & tw-animate-css 적용
+- `clsx` + `tailwind-merge` → `cn` 유틸 구축
+- pdfjs-dist 워커 설정 + 1페이지 렌더
+- Zustand 전역 스토어(persist/devtools) 도입
+- Home에 `<main>`/`<section>` 시맨틱 구조 반영
