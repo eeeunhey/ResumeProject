@@ -108,5 +108,3 @@ export default ResumeCard;
 
 <!-- Created: 2025-09-28 13:37 -->
 
-
-
