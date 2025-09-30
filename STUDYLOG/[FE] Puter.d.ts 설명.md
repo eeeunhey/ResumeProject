@@ -1,37 +1,43 @@
-좋아! 이 코드는 “어떤 모양의 데이터가 들어오고 나가는지”를 약속해 두는 **타입(설명서)** 모음이야.
-초등학생도 보자마자 감이 오도록, 이름/설명/예시를 쉽게 고쳐서 보여줄게. (원리는 그대로 유지)
+# puter.d.ts 인터페이스 설명
+
+
 
 ---
 
-# 1) 바로 써먹는 “쉬운 버전” 코드
+# 📄 TypeScript Interfaces 문서
+
+## 📂 FileItem
 
 ```ts
-
 /** 파일/폴더 1개에 대한 정보를 정의 */
 interface FileItem {
-  id: string;    /** 파일을 구분하는 고유번호 (사람 주민번호 같은 것) */
-  ownerId: string;      /** 사용자 고유번호 (이 파일의 주인) */
-  name: string;     /** 파일/폴더 이름 (예: "사진.png", "문서") */
+  id: string;                /** 파일을 구분하는 고유번호 (사람 주민번호 같은 것) */
+  ownerId: string;           /** 사용자 고유번호 (이 파일의 주인) */
+  name: string;              /** 파일/폴더 이름 (예: "사진.png", "문서") */
 
-  path: string;       /** 위치(길) (예: "/내문서/사진.png") */
-  isFolder: boolean;      /** 폴더면 true, 파일이면 false */
-  parentId: string;     /** 부모 폴더의 id (이 파일을 담고 있는 상자) */
-  parentOwnerId: string;      /** 부모 폴더의 주인 고유번호 */
+  path: string;              /** 위치(길) (예: "/내문서/사진.png") */
+  isFolder: boolean;         /** 폴더면 true, 파일이면 false */
+  parentId: string;          /** 부모 폴더의 id (이 파일을 담고 있는 상자) */
+  parentOwnerId: string;     /** 부모 폴더의 주인 고유번호 */
 
+  createdAt: number;         /** 만든 시간(숫자로 저장된 시각) */
+  updatedAt: number;         /** 바꾼 시간(수정한 시각) */
+  accessedAt: number;        /** 읽은 시간(열어본 시각) */
 
-  createdAt: number;      /** 만든 시간(숫자로 저장된 시각) */
-  updatedAt: number;      /** 바꾼 시간(수정한 시각) */
-  accessedAt: number;     /** 읽은 시간(열어본 시각) */
-
-  size: number | null;      /** 파일 크기(바이트). 폴더면 보통 null */
-  canWrite: boolean;      /** 내가 고칠 수 있나? (쓰기 가능) */
+  size: number | null;       /** 파일 크기(바이트). 폴더면 보통 null */
+  canWrite: boolean;         /** 내가 고칠 수 있나? (쓰기 가능) */
 }
+```
 
+---
 
+## 👤 SimpleUser
+
+```ts
 /** 서비스에 로그인한 유저 정보 */
 interface SimpleUser {
-  id: string;     /** 유저 고유번호 */
-  username: string;     /** 유저 이름 (닉네임) */
+  id: string;          /** 유저 고유번호 */
+  username: string;    /** 유저 이름 (닉네임) */
   /**
    *     id: "u-001",   // 고유번호 (컴퓨터가 구분할 때 쓰는 값)
    *     username: "은혜",      // 닉네임 (화면에 보이는 이름)
@@ -39,13 +45,19 @@ interface SimpleUser {
    *    여러명 모아보기 형태
    *    
    *    const users: SimpleUser[] = [
-        { id: "u-001", username: "은혜" },
-        { id: "u-002", username: "지구" },
-        { id: "u-003", username: "성민" },
-];
-  */
+   *      { id: "u-001", username: "은혜" },
+   *      { id: "u-002", username: "지구" },
+   *      { id: "u-003", username: "성민" },
+   *    ];
+   */
 }
+```
 
+---
+
+## 🗒️ KeyValue
+
+```ts
 /** 작은 메모장(키=이름, 값=내용) 한 줄 */
 interface KeyValue {
   key: string;
@@ -53,127 +65,149 @@ interface KeyValue {
 
   /**
    *  const memo1: KeyValue = {
-      key: "오늘할일",
-      value: "숙제하기",
-      };
-   * 
+   *    key: "오늘할일",
+   *    value: "숙제하기",
+   *  };
    * 
    * const settings: KeyValue[] = [
-      { key: "테마색", value: "어두운모드" },
-      { key: "폰트크기", value: "16px" },
-      { key: "언어", value: "한국어" },
-];
-   * 
-  */
-
+   *   { key: "테마색", value: "어두운모드" },
+   *   { key: "폰트크기", value: "16px" },
+   *   { key: "언어", value: "한국어" },
+   * ];
+   */
 }
+```
 
+---
 
+## 💬 ChatPiece
+
+```ts
 /** 채팅 한 조각(파일 보내기 or 글자 보내기) */
 interface ChatPiece {
-  type: "file" | "text";      /** 보낸 것의 종류: 파일인지 글자인지 */
-  filePath?: string;      /** 파일이면: 파일 위치(길) */
-  text?: string;      /** 글자면: 내용 */
+  type: "file" | "text";   /** 보낸 것의 종류: 파일인지 글자인지 */
+  filePath?: string;       /** 파일이면: 파일 위치(길) */
+  text?: string;           /** 글자면: 내용 */
   
   /**
    * 텍스트로 보낼 때
    * const helloMsg: ChatPiece = {
-      type: "text",
-      text: "안녕! 오늘 뭐 해?",   // 글자 내용
-    };
-   *  파일형식으로 보낼 때
-      const fileMsg: ChatPiece = {
-      type: "file",
-      filePath: "/내문서/사진.png",   // 파일 위치(경로)
-    };
+   *   type: "text",
+   *   text: "안녕! 오늘 뭐 해?",   // 글자 내용
+   * };
+   * 
+   * 파일 형식으로 보낼 때
+   * const fileMsg: ChatPiece = {
+   *   type: "file",
+   *   filePath: "/내문서/사진.png",   // 파일 위치(경로)
+   * };
    * 
    * 여러개를 이런식으로 보낸다
-    const mixedMsg: ChatPiece[] = [
-    { type: "text", text: "여기 내 사진이야!" },
-    { type: "file", filePath: "/내사진/여행.png" },
-];
-  */
-
+   * const mixedMsg: ChatPiece[] = [
+   *   { type: "text", text: "여기 내 사진이야!" },
+   *   { type: "file", filePath: "/내사진/여행.png" },
+   * ];
+   */
 }
+```
 
+---
 
+## 💭 ChatMessage
+
+```ts
 /** 채팅 메시지 1개 */
 interface ChatMessage {
-  role: "user" | "assistant" | "system";      /** 누가 말했나 */
-  content: string | ChatPiece[];      /** 내용(그냥 글자거나, 조각(ChatPiece)들의 배열) */
-  /**  content: [{ type: "text", text: "안녕! 내 사진 어때?" }],*/ -> 텍스트형식으로 정보 전송
-  /**  content: [{ type: "file", filePath: photo.path }], */  -> 파일 형식으로 정보 전송
-}
+  role: "user" | "assistant" | "system";    /** 누가 말했나 */
+  content: string | ChatPiece[];            /** 내용(그냥 글자거나, 조각(ChatPiece)들의 배열) */
 
+  /**  content: [{ type: "text", text: "안녕! 내 사진 어때?" }], */  -> 텍스트형식으로 정보 전송
+  /**  content: [{ type: "file", filePath: photo.path }], */        -> 파일 형식으로 정보 전송
+}
+```
+
+---
+
+## ⚙️ ChatOptions
+
+```ts
 /** AI에게 넣는 옵션들 */
 interface ChatOptions {
 
-  model?: string;     /** 어떤 모델 쓸까? (두뇌 종류) */
-  stream?: boolean;     /** 스트리밍(말을 이어서) 받을까? */
+  model?: string;         /** 어떤 모델 쓸까? (두뇌 종류) */
+  stream?: boolean;       /** 스트리밍(말을 이어서) 받을까? */
   maxTokens?: number;     /** 최대 글자 수(토큰 수) 제한 */
-  temperature?: number;     /** 창의력 정도 (0~1쯤, 높을수록 상상 많이) */
+  temperature?: number;   /** 창의력 정도 (0~1쯤, 높을수록 상상 많이) */
 
   /**
    * model: "gpt-4"
    * stream?: true; 
-   * AI가 답을 생각나는 대로 바로바로 말함 (true) / AI가 답을 다 생각한 뒤 한꺼번에 말함(false)
-   * axTokens?: number; maxTokens: 200 200자 이내로 써라
-   * temperature?: number;  대답을 정확하게 자료근거로만 0 / AI 생각해서 하는 자료: 1 
+   *   AI가 답을 생각나는 대로 바로바로 말함 (true) 
+   *   AI가 답을 다 생각한 뒤 한꺼번에 말함(false)
    * 
-  */
+   * maxTokens: 200 
+   *   200자 이내로 써라
+   * 
+   * temperature: 0 → 대답을 정확하게 자료근거로만 
+   * temperature: 1 → AI가 상상해서 대답
+   */
 
-
-  /** AI가 부를 수 있는 도구(함수)들 AI는 주방 요리사이고, tools는 요리 도구(칼, 국자, 믹서기) */ 
+  /** AI가 부를 수 있는 도구(함수)들 
+   *  AI는 주방 요리사이고, tools는 요리 도구(칼, 국자, 믹서기)
+   */ 
   tools?: {
     type: "function";
     function: {
-      name: string;         /** 도구 이름 */
-      description: string;          /** 도구 설명 (언제 쓰는지) */
-      parameters: { type: string; properties: {} };         /** 도구가 받는 재료(입력)의 모양 */
+      name: string;                           /** 도구 이름 */
+      description: string;                    /** 도구 설명 (언제 쓰는지) */
+      parameters: { type: string; properties: {} }; /** 도구가 받는 재료(입력)의 모양 */
     }[];
   };
 
   /**
-   * 오늘 서울 날씨 알려줘” → getWeather 도구를 사용해서 답을 줄 수 있음
+   * 예: “오늘 서울 날씨 알려줘” → getWeather 도구를 사용해서 답을 줄 수 있음
+   * 
    * const options = {
-        tools: {
-          type: "function",
-          function: [
-            {
-              name: "getWeather",
-              description: "원하는 도시의 현재 날씨를 알려줍니다",
-              parameters: {
-                type: "object",
-                properties: {
-                  city: { type: "string" },     // 도시 이름
-                  date: { type: "string" },     // 날짜
-                },
-              },
-            },
-          ],
-        },
-      };
-   * 
-   * 
-  */
-
+   *   tools: {
+   *     type: "function",
+   *     function: [
+   *       {
+   *         name: "getWeather",
+   *         description: "원하는 도시의 현재 날씨를 알려줍니다",
+   *         parameters: {
+   *           type: "object",
+   *           properties: {
+   *             city: { type: "string" },     // 도시 이름
+   *             date: { type: "string" },     // 날짜
+   *           },
+   *         },
+   *       },
+   *     ],
+   *   },
+   * };
+   */
 }
+```
 
+---
+
+## 🤖 AIResponse
+
+```ts
 /** AI가 준 답 1개에 대한 정보 */
 interface AIResponse {
   index: number;      /** 몇 번째 답인지(0부터) */
-  message: {        /** 실제 메시지(누가, 무엇을 말했는지) */
-    role: string;       // 누가 말했는지 (user/assistant/system)
-    content: string | any[];      // 말한 내용 (글자나 배열)
-    refusal: null | string;       /** 안전/정책 때문에 거절한 이유(없으면 null) */
-    annotations: any[];       /** 참고 표시(첨부나 근거 같은 메모) */
+  message: {          /** 실제 메시지(누가, 무엇을 말했는지) */
+    role: string;                // 누가 말했는지 (user/assistant/system)
+    content: string | any[];     // 말한 내용 (글자나 배열)
+    refusal: null | string;      /** 안전/정책 때문에 거절한 이유(없으면 null) */
+    annotations: any[];          /** 참고 표시(첨부나 근거 같은 메모) */
   };
 
-  logprobs: null | any;     /** 단어별 점수 같은 세부정보(없을 수 있음) */
-  finish_reason: string;      /** 왜 멈췄는지("stop", "length" 등) */
+  logprobs: null | any;          /** 단어별 점수 같은 세부정보(없을 수 있음) */
+  finish_reason: string;         /** 왜 멈췄는지("stop", "length" 등) */
 
-
-  usage: {      /** 사용량(얼마나 썼는지, 비용 등) */
+  usage: {                       /** 사용량(얼마나 썼는지, 비용 등) */
     type: string;   // 예: "input", "output"
     model: string;  // 사용한 모델 이름
     amount: number; // 사용 토큰 수
@@ -183,33 +217,31 @@ interface AIResponse {
   /** 외부 AI 서비스(프록시)를 거쳤는지 */
   via_ai_chat_service: boolean;
 
-
   /**
-   * AI가 0번째 답을 던져줌 : 안녕하세요! 오늘 기분은 어때요? 라고 말함 
+   * 예시
+   * 
+   * AI가 0번째 답을 던져줌 : "안녕하세요! 오늘 기분은 어때요?" 라고 말함 
    * 
    * const response: AIResponse = {
-      index: 0,
-      message: {
-        role: "assistant",
-        content: "안녕하세요! 오늘 기분은 어때요?",
-        refusal: null,
-        annotations: [],
-      },
-      logprobs: null,
-      finish_reason: "stop",
-      usage: [
-        { type: "input", model: "gpt-4", amount: 10, cost: 0.001 },
-        { type: "output", model: "gpt-4", amount: 15, cost: 0.002 },
-      ],
-      via_ai_chat_service: false,
-};
-   * 
-   * 
-  */
+   *   index: 0,
+   *   message: {
+   *     role: "assistant",
+   *     content: "안녕하세요! 오늘 기분은 어때요?",
+   *     refusal: null,
+   *     annotations: [],
+   *   },
+   *   logprobs: null,
+   *   finish_reason: "stop",
+   *   usage: [
+   *     { type: "input", model: "gpt-4", amount: 10, cost: 0.001 },
+   *     { type: "output", model: "gpt-4", amount: 15, cost: 0.002 },
+   *   ],
+   *   via_ai_chat_service: false,
+   * };
+   */
 }
-
+```
 ---
-
 
 # 2) 왜 썼는지 & 어디에 쓰는지 (한 줄 요약)
 
