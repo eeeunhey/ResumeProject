@@ -21,7 +21,7 @@ export default function Home() {
     <main className="bg-[url('/images/bg-main.svg')] bg-cover">
       <Navbar />
       <section className="main-section">
-        <div className="page-heading">
+        <div className="page-heading py-18">
           <h1>Ascend — 나의 커리어 흐름을 다음 단계로</h1>
           <h2>
             지원 기록을 한눈에 정리하고,
