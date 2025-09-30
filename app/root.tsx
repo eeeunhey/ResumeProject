@@ -7,7 +7,7 @@ import {
   ScrollRestoration, // 페이지 전환 시 스크롤 위치를 복원.
 } from "react-router"; // 
 
-import type { Route } from "./+types/root"; //자동 생성된 타입 파일(+types/root)에서 Route 타입만 가져옴.
+import type { Route } from ".react-router/app/+types/root"; //자동 생성된 타입 파일(+types/root)에서 Route 타입만 가져옴.
 import "./app.css";
 
 
@@ -39,6 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <script src="https://js.puter.com/v2/"></script>
         {children}
         <ScrollRestoration />
         <Scripts />
