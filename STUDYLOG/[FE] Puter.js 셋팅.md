@@ -108,21 +108,29 @@ declare global { // 어디서든 꺼내쓰는 함수 모음집
          * const blob = await fs.read("/memo.txt");
          * console.log(blob);
          * 출력값 : Blob {size: 12, type:"text/plain"}
-         * 왜 블랍을 반환하지? / size type은 지정해놓지 않았는데 어떻게 가져와?
+         * Blob은 크기(size)와 타입(type)을 스스로 가지고 있음
+         * read가 Blob을 반환하는 이유 → 파일을 다루는 웹 표준 통일 타입
+         * 봉투 바깥에 **라벨(size, type)**이 붙어 있어서, 안 열어봐도 대략 뭔지 알 수 있음
+         * Blob은 그냥 덩어리라서, 텍스트/이미지/다운로드 등 용도에 맞게 변환해서 써야 함
         */
 
-        upload: (file: File[] | Blob[]) => Promise<FSItem>;
+        upload: (file: File[] | Blob[]) => Promise<FSItem>; //puter.d.ts에 타입정의해놈 
         /** 집에서 가져온 파일을 사물함에 올리기
          * upload : 사용자가 선택한 파일(브라우저 File 객체)이나 Blob을 Puter에 업로드.
          * const fileInput = document.querySelector("input[type=file]");
          * const uploaded = await fs.upload(fileInput.files);
          * console.log(uploaded); // 업로드된 FSItem 정보
-         * 
+         * **업로드된 파일의 상세 정보(FSItem)**를 돌려줌
+         *  "id": "f_12345",
+            "uid": "u_67890", name, 그 아래 정의 타입의 값을 반환
          * 
         */
         delete: (path: string) => Promise<void>;
-        /** 사물함에서 노트 빼고 버리기
-         * 
+        /** path라는 주소를 받아서, 해당 위치에 있는 파일/폴더를 지워요. 
+         * 끝났다는 신호만 주고, 따로 값은 안 돌려줌 Promise<void>인 이유
+         * awite fs.delete("/내문서/memo.txt");
+         * console.log("memo.txt 삭제 완료");
+         * 출력값 : memo.txt 삭제 완료!
          * 
         */
 
@@ -130,8 +138,99 @@ declare global { // 어디서든 꺼내쓰는 함수 모음집
 
         /** 사물함 안에 뭐가 있는지 목록 확인하기
          * 
-         * 
+         * readdir(path) 는 path 위치(폴더 경로)를 주면
+         * → 그 안에 있는 파일/폴더 리스트를 FSItem[] 배열로 돌려줘요.
+         *   실패하거나 없는 경로라면 undefined가 될 수 있음.
+         *  const items = awit fs.readdir("/내문서");
+         *  console.log(items);
         */
+      };
+
+
+```
+
+
+```ts
+// Puter 안에서 AI 채팅이나 이미지 → 텍스트 변환 같은 기능
+
+      ai: {
+        chat: ( // AI와 대화하는 함수
+          prompt: string | ChatMessage[],            // 질문[문자열 또는], ChatMessage[]여러 프롬프트 넣음
+          imageURL?: string | PuterChatOptions, // 이미지 주소나 옵션 (선택)
+          testMode?: boolean,                   // 테스트 모드 여부
+          options?: PuterChatOptions            // 모델 설정 (예: 모델 종류, 온도, 최대 토큰 등)
+        ) => Promise<Object>;                   // AI가 생성한 답변이 객체 형태로 옴 (예: 응답 메시지, 메타데이터 등)
+          /**
+           * const res = await fs.ai.chat("안녕? 오늘 날씨 어때?");
+           * console.log(res);
+           * 
+           * Json 형식으로 반환
+           * {
+                  "message": "안녕하세요! 오늘은 맑고 기분 좋은 날씨네요 🌞"
+              }
+           * 
+          */
+
+        img2txt: (
+          image: string | File | Blob, //이미지 파일, Blob, 혹은 파일 경로
+          testMode?: boolean           // 테스트 모드 여부
+        ) => Promise<string>;          // Promise<string> → 이미지 설명 문자열
+
+        /**
+         * const caption = await fs.ai.img2txt("/사진/고양이.png);
+         * console.log(caption);
+         * 출력 : "귀여운 회색 고양이가 소파 위에 앉아 있습니다." 반환
+        */
+      };
+
+        kv: {
+          get: (key: string) => Promise<string | null>;
+            /**
+             *  get(key) key(이름)에 저장된 값을 가져오기. 없으면 null값
+             *  await kv.set("nickname", "쿼카");
+             *  const name = await kv.get("nickname");
+             *  console.log(name); 
+             *  출력값 : "쿼카"
+             * 
+            */
+          set: (key: string, value: string) => Promise<boolean>;
+          /** 새로운 값 저장하기 (덮어쓰기 가능).
+           * set(key, value)
+           * const ok = await kv.set("theme", "dark");
+           * console.log(ok);
+           * 결과값: true
+          */
+
+          delete: (key: string) => Promise<boolean>;
+          /**
+           * 특정 key를 지움.
+           * const ok = await kv.delete("theme");
+           * console.log(ok);
+           * 출력값 : true
+          */
+
+          list: (pattern: string, returnValues?: boolean) => Promise<string[]>;
+          /**
+           * 특정 패턴에 맞는 key 목록을 배열로 반환
+           * returnValues를 true -> key 값만 반환
+           * 
+           * await kv.set("nickname", "쿼카");
+           * await kv.set("theme", "dark");
+           * 
+           * const key = await kv.list("*");
+           * console.log(keys) 
+           * 출력값 : ["nickname", "them"] 키값만 출력한다
+          */
+
+
+          flush: () => Promise<boolean>;
+          /**
+           * 전체 key-value 데이터 싹 다 삭제.
+           * await kv.flush();
+           * const keys = await kv.list("*");
+           * console.log(keys); []
+           * 
+          */
       };
 
 
