@@ -1,4 +1,4 @@
-fe-log# 제목
+# 📌 ResumeCard.tsx 설명
 
 > TL;DR 한 줄 요약
 

@@ -1,8 +1,6 @@
 
-
-
-
-```
+<details> 
+<summary>
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -234,4 +232,329 @@ declare global { // 어디서든 꺼내쓰는 함수 모음집
       };
 
 
+</summary>
+</details>
+
+
+# 📂 Window.puter.fs
+
+파일 시스템 관련 기능 (읽기, 쓰기, 업로드, 삭제, 목록 조회)을 제공합니다.
+
+---
+
+## 📌 write
+
+```ts
+write: (path: string, data: string | File | Blob) => Promise<File | undefined>;
 ```
+
+특정 경로에 파일을 새로 쓰거나 저장합니다.
+
+**예시**
+
+```ts
+const file = await window.puter.fs.write("/memo.txt", "안녕하세요");
+console.log(file);
+```
+
+**출력**
+
+```
+/memo.txt 파일이 만들어지고 내용은 "안녕하세요".
+```
+
+---
+
+## 📌 read
+
+```ts
+read: (path: string) => Promise<Blob>;
+```
+
+파일을 읽어 Blob 객체로 반환합니다.
+
+**예시**
+
+```ts
+const blob = await window.puter.fs.read("/memo.txt");
+console.log(blob);
+```
+
+**출력**
+
+```
+Blob { size: 12, type: "text/plain" }
+```
+
+👉 Blob은 파일 데이터를 담은 "덩어리"이며, size/type 같은 정보가 자동으로 붙습니다.
+
+---
+
+## 📌 upload
+
+```ts
+upload: (file: File[] | Blob[]) => Promise<FSItem>;
+```
+
+사용자가 선택한 파일(또는 Blob)을 업로드합니다.
+
+**예시**
+
+```ts
+const fileInput = document.querySelector("input[type=file]");
+const uploaded = await window.puter.fs.upload(fileInput.files);
+console.log(uploaded);
+```
+
+**출력 (FSItem 예시)**
+
+```json
+{
+  "id": "f_12345",
+  "uid": "u_67890",
+  "name": "resume.pdf",
+  "path": "/내문서/resume.pdf",
+  "is_dir": false,
+  "size": 204800,
+  "writable": true
+}
+```
+
+---
+
+## 📌 delete
+
+```ts
+delete: (path: string) => Promise<void>;
+```
+
+지정한 경로의 파일/폴더를 삭제합니다.
+
+**예시**
+
+```ts
+await window.puter.fs.delete("/내문서/memo.txt");
+console.log("memo.txt 삭제 완료!");
+```
+
+**출력**
+
+```
+memo.txt 삭제 완료!
+```
+
+---
+
+## 📌 readdir
+
+```ts
+readdir: (path: string) => Promise<FSItem[] | undefined>;
+```
+
+폴더 안에 있는 파일/폴더 목록을 반환합니다.
+
+**예시**
+
+```ts
+const items = await window.puter.fs.readdir("/내문서");
+console.log(items);
+```
+
+**출력**
+
+```json
+[
+  { "name": "memo.txt", "is_dir": false },
+  { "name": "photos", "is_dir": true }
+]
+```
+
+---
+
+# 🤖 Window.puter.ai
+
+AI 채팅 및 이미지 → 텍스트 변환 기능을 제공합니다.
+
+---
+
+## 📌 chat
+
+```ts
+chat: (
+  prompt: string | ChatMessage[],
+  imageURL?: string | PuterChatOptions,
+  testMode?: boolean,
+  options?: PuterChatOptions
+) => Promise<Object>;
+```
+
+AI와 대화를 합니다.
+
+**예시**
+
+```ts
+const res = await window.puter.ai.chat("안녕? 오늘 날씨 어때?");
+console.log(res);
+```
+
+**출력**
+
+```json
+{
+  "message": "안녕하세요! 오늘은 맑고 기분 좋은 날씨네요 🌞"
+}
+```
+
+---
+
+## 📌 img2txt
+
+```ts
+img2txt: (image: string | File | Blob, testMode?: boolean) => Promise<string>;
+```
+
+이미지 내용을 텍스트 설명으로 변환합니다.
+
+**예시**
+
+```ts
+const caption = await window.puter.ai.img2txt("/사진/고양이.png");
+console.log(caption);
+```
+
+**출력**
+
+```
+"귀여운 회색 고양이가 소파 위에 앉아 있습니다."
+```
+
+---
+
+# 📝 Window.puter.kv
+
+간단한 Key-Value 저장소 기능을 제공합니다. (작은 메모장처럼 사용)
+
+---
+
+## 📌 get
+
+```ts
+get: (key: string) => Promise<string | null>;
+```
+
+특정 key의 값을 가져옵니다.
+
+**예시**
+
+```ts
+await window.puter.kv.set("nickname", "쿼카");
+const name = await window.puter.kv.get("nickname");
+console.log(name);
+```
+
+**출력**
+
+```
+"쿼카"
+```
+
+---
+
+## 📌 set
+
+```ts
+set: (key: string, value: string) => Promise<boolean>;
+```
+
+key에 새로운 값을 저장합니다. (덮어쓰기 가능)
+
+**예시**
+
+```ts
+const ok = await window.puter.kv.set("theme", "dark");
+console.log(ok);
+```
+
+**출력**
+
+```
+true
+```
+
+---
+
+## 📌 delete
+
+```ts
+delete: (key: string) => Promise<boolean>;
+```
+
+특정 key를 삭제합니다.
+
+**예시**
+
+```ts
+const ok = await window.puter.kv.delete("theme");
+console.log(ok);
+```
+
+**출력**
+
+```
+true
+```
+
+---
+
+## 📌 list
+
+```ts
+list: (pattern: string, returnValues?: boolean) => Promise<string[]>;
+```
+
+저장된 key 목록을 반환합니다.
+
+**예시**
+
+```ts
+await window.puter.kv.set("nickname", "쿼카");
+await window.puter.kv.set("theme", "dark");
+
+const keys = await window.puter.kv.list("*");
+console.log(keys);
+```
+
+**출력**
+
+```
+["nickname", "theme"]
+```
+
+---
+
+## 📌 flush
+
+```ts
+flush: () => Promise<boolean>;
+```
+
+모든 key-value 데이터를 삭제합니다.
+
+**예시**
+
+```ts
+await window.puter.kv.flush();
+const keys = await window.puter.kv.list("*");
+console.log(keys);
+```
+
+**출력**
+
+```
+[]
+```
+
+---
+
+✅ 이제 `auth`, `fs`, `ai`, `kv` 전부 같은 포맷으로 문서화가 끝났습니다.
+👉 원하시나요? 제가 이걸 바로 `README.md` 형식 템플릿으로 합쳐서, 프로젝트에 복붙 가능한 버전으로 만들어드릴까요?
