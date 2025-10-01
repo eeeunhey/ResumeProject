@@ -336,3 +336,168 @@ const options: ChatOptions = {
 
 * 이 파일은 “데이터의 **모양(설명서)**”을 미리 정해두는 **타입 정의** 모음이에요.
 
+
+---
+
+# 1) 한 줄씩 해설
+
+```ts
+const getPuter = (): typeof window.puter | null =>
+```
+
+* `getPuter`라는 함수를 만든다.
+* 이 함수는 “브라우저 창(window) 안에 있는 `puter`라는 도구”를 돌려주거나(`typeof window.puter`), 없으면 `null`을 돌려준다.
+* 타입 표기 `: typeof window.puter | null` 은 “반환값이 `window.puter`와 같은 타입 **또는** null”이라는 뜻.
+
+```ts
+  typeof window !== "undefined" && window.puter ? window.puter : null;
+```
+
+* **브라우저에서만** `window`가 있다. (서버 사이드 렌더링 환경에선 없음)
+* 그래서 먼저 `typeof window !== "undefined"`로 “지금 브라우저 맞아?”를 확인.
+* 그리고 `window.puter`가 있으면 그걸 반환, 없으면 `null`을 반환.
+* 비유: “가방이 있니? ➜ 있으면 가방 안에 연필(puter) 있니? ➜ 있으면 연필 꺼내, 없으면 ‘없음(null)’!”
+
+---
+
+```ts
+export const usePuterStore = create<PuterStore>((set, get) => {
+```
+
+* Zustand의 `create`로 **앱 전체에서 공유하는 보관함(스토어)** 을 만든다.
+* `set`은 “스토어 값 바꾸기”, `get`은 “스토어 현재값 읽기”.
+* `<PuterStore>`는 “이 스토어의 모양(타입)”을 정한다. (예: `error`, `auth`, `isLoading` 등)
+
+```ts
+  const setError = (msg: string) => {
+```
+
+* `setError`라는 **도우미 함수**: 에러가 났을 때 한 번에 상태를 정리하려고 만든다.
+* `msg`는 사용자에게 보여줄 에러 메시지.
+
+```ts
+    set({
+      error: msg,
+      isLoading: false,
+```
+
+* `set({ ... })`로 스토어 값을 바꾼다.
+* `error`에 방금 받은 메시지를 넣고, 로딩 중이 아니므로 `isLoading`은 `false`.
+
+```ts
+      auth: {
+        user: null,
+        isAuthenticated: false,
+```
+
+* 에러가 났으니 로그인 정보는 **깨끗하게 초기화**:
+
+  * `user`는 없음 → `null`
+  * 로그인 상태 아님 → `false`
+
+```ts
+        signIn: get().auth.signIn,
+        signOut: get().auth.signOut,
+        refreshUser: get().auth.refreshUser,
+        checkAuthStatus: get().auth.checkAuthStatus,
+        getUser: get().auth.getUser,
+```
+
+* 하지만 **기능(함수)들은 그대로 유지**한다.
+
+  * `get()`으로 현재 스토어를 읽고, 그 안에 있던 `auth.signIn` 같은 함수 레퍼런스를 그대로 가져온다.
+  * 이유: 에러로 상태(데이터)는 초기화하지만, “다시 시도”할 때 필요한 버튼/액션들은 살아 있어야 하니까.
+
+```ts
+      },
+    });
+```
+
+* 여기까지가 `set`으로 바꾸는 새 상태 묶음.
+
+```ts
+  };
+});
+```
+
+* `setError` 함수 정의 끝.
+* `create` 콜백 끝.
+
+> ⚠️ 여기서 **주의**: 지금 구조에선 `setError`를 스토어 상태에 **담아주지 않았기 때문에**, 컴포넌트 바깥에서 `usePuterStore.getState().setError(...)`처럼 **직접 호출할 수가 없어요.**
+> `return { ... }`에 넣어주거나, `set({ setError })` 같은 식으로 **스토어에 포함**시켜야 합니다.
+
+---
+
+# 2) 왜 이런 구조를 쓰나요?
+
+* **SSR 안전**: `window`가 없는 환경(Next.js 서버)에서 에러 안 나게 `typeof window !== 'undefined'`로 가드.
+* **비상 리셋 스위치**: `setError`는 “앱이 꼬였을 때 한 번에 초기화 + 에러 표시”를 위한 스위치.
+* **재시도 가능**: 상태는 초기화하지만, 로그인/로그아웃 같은 **행동(함수)은 유지**해서 사용자가 다시 시도할 수 있게.
+
+---
+
+# 3) 어디에 어떻게 씁니까? (적용 예시)
+
+### (1) `getPuter` 사용
+
+```ts
+const puter = getPuter();
+if (!puter) {
+  // 브라우저가 아니거나 puter가 없는 경우
+  console.warn("Puter 가 없어요. 기능을 비활성화합니다.");
+} else {
+  // 안전하게 사용
+  await puter.openFilePicker?.();
+}
+```
+
+### (2) 에러 발생 시 상태 리셋
+
+```ts
+try {
+  await api.login(id, pw);
+} catch (e) {
+  // 스토어에 setError가 들어있다는 가정(완성형 예시 참고)
+  usePuterStore.getState().setError("로그인 실패! 다시 시도해주세요.");
+}
+```
+
+---
+
+
+### 컴포넌트에서 사용 예시
+
+```tsx
+function LoginButton() {
+  const { auth, setError, error } = usePuterStore();
+
+  const onClick = async () => {
+    try {
+      await auth.signIn("id", "pw");   // 성공하면 다른 상태 업데이트 로직…
+    } catch {
+      setError("로그인 실패! 네트워크를 확인해주세요.");
+    }
+  };
+
+  return (
+    <>
+      <button onClick={onClick}>로그인</button>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+    </>
+  );
+}
+```
+
+---
+
+# 5) 자주 하는 실수 & 팁
+
+* **(실수)** `create((set, get) => { ... })` 안에서 **초기 상태를 반환하지 않음** → 스토어가 비어있음
+  **(해결)** `return { ...초기값 }`을 반드시 작성.
+* **(실수)** `setError`를 스토어에 안 넣음 → 컴포넌트에서 못 씀
+  **(해결)** `return`하는 객체에 `setError` 포함.
+* **함수 레퍼런스 유지**: 에러로 상태를 비워도, `signIn` 같은 액션은 계속 쓸 수 있게 `get().auth.xxx`를 다시 넣어준다.
+* **SSR 가드**: `getPuter`처럼 `typeof window !== 'undefined'` 체크는 Next.js 같은 환경에서 꼭 필요.
+
+---
+
