@@ -320,3 +320,6 @@ export default function Home() {
 - pdfjs-dist 워커 설정 + 1페이지 렌더
 - Zustand 전역 스토어(persist/devtools) 도입
 - Home에 `<main>`/`<section>` 시맨틱 구조 반영
+
+
+
