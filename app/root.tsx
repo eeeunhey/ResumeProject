@@ -7,13 +7,15 @@ import {
   ScrollRestoration, // 페이지 전환 시 스크롤 위치를 복원.
 } from "react-router"; // 
 
-import type { Route } from ".react-router/app/+types/root"; //자동 생성된 타입 파일(+types/root)에서 Route 타입만 가져옴.
+import type * as root from ".react-router/types/app/+types/root"; //자동 생성된 타입 파일(+types/root)에서 Route 타입만 가져옴.
 import "./app.css";
+import { usePuterStore } from "./lib/puter";
+import { useEffect } from "react";
 
 
 //역할: <head> 안에 필요한 외부 리소스(폰트, CSS 등)를 추가하는 함수.
 // Route.LinksFunction 타입은 React Router가 제공하는 링크 함수 형태.
-export const links: Route.LinksFunction = () => [
+export const links: root.Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -30,6 +32,12 @@ export const links: Route.LinksFunction = () => [
 // 전체 HTML 문서의 기본 구조 정의.
 // children 자리에 각 페이지(Outlet 내용)가 들어옴.
 export function Layout({ children }: { children: React.ReactNode }) {
+  const{init} = usePuterStore();
+
+  useEffect(() => {
+    init()
+  }, [init]);
+
   return (
     <html lang="en">
       <head>
@@ -59,7 +67,7 @@ export default function App() {
 // React Router v7의 오류 경계 컴포넌트.
 // 페이지 로딩 중 오류가 나면 이 UI가 대신 표시됨.
 // 응답 오류(404 등)인지 확인.
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+export function ErrorBoundary({ error }: root.Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
