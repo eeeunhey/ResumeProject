@@ -37,15 +37,13 @@ const FileUploader = ({ onFileSelect }: FileUploaderProps) => {
             <p>파일을 여기로 옮겨주세요 🙂</p> : 
             <p>👉 파일을 이곳에 드래그하거나, 클릭하여 업로드할 파일을 선택하세요.</p>
         } */}
-        <div>
-          <div className="mx-auto w-16 h-16 flex items-center justify-center">
-            <img src="/icons/info.svg" alt="upload" className="size-20" />
-          </div>
-        </div>
+        <div></div>
 
         {file ? (
-          <div className="uploader-select-file" onClick={(e) => e.stopPropagation()}>
-            
+          <div
+            className="uploader-select-file"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center space-x-3">
               <img src="/images/pdf.png" alt="pdf" className="size-10" />
               <div>
@@ -55,9 +53,15 @@ const FileUploader = ({ onFileSelect }: FileUploaderProps) => {
                 <p className="text-sm text-gray-500">{formatSize(file.size)}</p>
               </div>
             </div>
+            <button>
+                <img src="/icons/cross.svg" alt="remove" className="w-4 h4" />
+            </button>
           </div>
         ) : (
           <div>
+            <div className="mx-auto w-16 h-16 flex items-center justify-center mb-2">
+              <img src="/icons/info.svg" alt="upload" className="size-20" />
+            </div>
             <p>
               <span className="font-semibold">Click to upload</span> or drag and
               drop
