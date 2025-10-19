@@ -15,3 +15,7 @@ export function formatSize(bytes: number): string {
   // Format with 2 decimal places and round
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+
+//브라우저 환경에서는 window.crypto라는 전역 객체가 자동으로 있음 
+export const generateUUID = () => crypto.randomUUID();
