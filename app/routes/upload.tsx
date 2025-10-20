@@ -11,6 +11,10 @@ const upload = () => {
     setFile(file)
   }
 
+  const handleAnalyze = async  ({companyName, jobTitle, jobDescription, file}:{companyName:string, jobTitle:string, jobDescription:string, file: File }) => {
+
+  }
+
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -18,14 +22,17 @@ const upload = () => {
     if(!form) return;
     const formData = new FormData(form);
 
-    const companyName = formData.get('company-name');
-    const jobTitle = formData.get('job-title');
-    const jobDescription = formData.get('job-description');
+    const companyName = formData.get('company-name') as string;
+    const jobTitle = formData.get('job-title') as string;
+    const jobDescription = formData.get('job-description') as string;
 
-    console.log({
-      companyName, jobTitle, jobDescription, file
-    })
+    if(!file) return;
+    // console.log({
+    // 값이 잘 들어오는 확인용 : 잘들어옴`
+    //   companyName, jobTitle, jobDescription, file
+    // })
 
+    handleAnalyze({companyName, jobTitle, jobDescription, file}) 
   };
 
   return (
