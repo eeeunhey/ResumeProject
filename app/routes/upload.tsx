@@ -14,7 +14,7 @@ const upload = () => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget.closet('from');
+    const form = e.currentTarget.closest('form');
     if(!form) return;
     const formData = new FormData(form);
 

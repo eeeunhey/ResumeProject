@@ -46,11 +46,12 @@ const FileUploader = ({ onFileSelect }: FileUploaderProps) => {
           >
             <div className="flex items-center space-x-3">
               <img src="/images/pdf.png" alt="pdf" className="size-10" />
-              <div>
+              <div className="flex items-center space-x-3">
                 <p className="text-sm text-gray-700 font-medium truncate max-w-xs">
                   {file.name}
                 </p>
-                <p className="text-sm text-gray-500">{formatSize(file.size)}</p>
+                <p className="text-sm text-gray-500">
+                  {formatSize(file.size)}</p>
               </div>
             </div>
             <button className="p-2 curosr-pointer" onClick={(e) => {
