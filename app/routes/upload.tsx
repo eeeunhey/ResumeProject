@@ -1,38 +1,59 @@
 import { type FormEvent, useState } from "react";
+import { useNavigate } from "react-router";
 import FileUploader from "~/components/FileUploader";
 import Navbar from "~/components/Navbar";
+import { usePuterStore } from "~/lib/puter";
 
 const upload = () => {
+  const { auth, isLoading, fs, ai, kv} = usePuterStore();
+  const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  const handleFileSelect=(file:File | null) => {
-    setFile(file)
-  }
+  const handleFileSelect = (file: File | null) => {
+    setFile(file);
+  };
 
-  const handleAnalyze = async  ({companyName, jobTitle, jobDescription, file}:{companyName:string, jobTitle:string, jobDescription:string, file: File }) => {
+  const handleAnalyze = async ({
+    companyName,
+    jobTitle,
+    jobDescription,
+    file,
+  }: {
+    companyName: string;
+    jobTitle: string;
+    jobDescription: string;
+    file: File;
+  }) => {
+    //함수 호출하는 순간 true 파일 업로드 안내
+    setIsProcessing(true);
+    setStatusText("파일 업로드 중입니다....");
+    
+    const uploadedFile = await fs.upload([file])
 
-  }
-
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget.closest('form');
-    if(!form) return;
+    const form = e.currentTarget.closest("form");
+    if (!form) return;
     const formData = new FormData(form);
 
-    const companyName = formData.get('company-name') as string;
-    const jobTitle = formData.get('job-title') as string;
-    const jobDescription = formData.get('job-description') as string;
+    const companyName = formData.get("company-name") as string;
+    const jobTitle = formData.get("job-title") as string;
+    const jobDescription = formData.get("job-description") as string;
 
-    if(!file) return;
-    // console.log({
-    // 값이 잘 들어오는 확인용 : 잘들어옴`
-    //   companyName, jobTitle, jobDescription, file
-    // })
+    if (!file) return;
+    console.log({
+      //값이 잘 들어오는 확인용 : 잘들어옴`
+      companyName,
+      jobTitle,
+      jobDescription,
+      file,
+    });
 
-    handleAnalyze({companyName, jobTitle, jobDescription, file}) 
+    handleAnalyze({ companyName, jobTitle, jobDescription, file });
   };
 
   return (
@@ -93,13 +114,12 @@ const upload = () => {
 
               <div className="form-div">
                 <label htmlFor="uploader">이력서 업로드</label>
-                <FileUploader onFileSelect={handleFileSelect}/>
+                <FileUploader onFileSelect={handleFileSelect} />
               </div>
-            
+
               <button className="primary-button" type="submit">
                 이력서 분석하기
               </button>
-
             </form>
           )}
         </div>
