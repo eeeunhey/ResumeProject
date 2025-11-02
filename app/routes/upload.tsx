@@ -2,7 +2,9 @@ import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
 import FileUploader from "~/components/FileUploader";
 import Navbar from "~/components/Navbar";
+import { convertPdfToImage } from "~/lib/pdf2img";
 import { usePuterStore } from "~/lib/puter";
+import { generateUUID } from "~/lib/utils";
 
 const upload = () => {
   const { auth, isLoading, fs, ai, kv} = usePuterStore();
@@ -30,8 +32,26 @@ const upload = () => {
     setIsProcessing(true);
     setStatusText("파일 업로드 중입니다....");
     
-    const uploadedFile = await fs.upload([file])
+    const uploadedFile = await fs.upload([file]);
+    if(!uploadedFile) return setStatusText('에러: 파일 업로드에 실패했습니다');
+    setStatusText('이미지 변환 중...');
+     const imageFile = await convertPdfToImage(file);
+    if(!imageFile.file) return setStatusText('에러: PDF 이미지 변환에 실패했습니다')
+      setStatusText('이미지 업로드 중입니다...');
+    const uploadedImage = await fs.upload([imageFile.file]);
+    if(!uploadedImage) return setStatusText('에러: 이미지 업로드에 실패했습니다...');
+    setStatusText('잠시만 기다려주세요, 데이터를 정리 중입니다');
+    const uuid = generateUUID();
+    const data = {
+      id:uuid,
+      resumePath: uploadedFile.path,
+      imagePath: uploadedFile.path,
+      companyName, jobTitle, jobDescription,
+      feedback:'',
+    }
+    await kv.set(`resume:${uuid}`, JSON.stringify(data));
 
+    setStatusText(`분석하는 중...`);
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
