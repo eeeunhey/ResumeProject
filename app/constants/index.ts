@@ -247,11 +247,11 @@ interface Feedback {
 export const prepareInstructions = ({
   jobTitle,
   jobDescription,
-  AIResponseFormat,
+  // AIResponseFormat,
 }: {
   jobTitle: string;
   jobDescription: string;
-  AIResponseFormat: string;
+  // AIResponseFormat: string;
 }) => `
 당신은 ATS(Applicant Tracking System) 및 이력서 분석 전문가입니다.
 이 이력서를 철저하고 상세하게 분석하고, 개선 방법을 제안해 주세요.

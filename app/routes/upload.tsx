@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
 import FileUploader from "~/components/FileUploader";
 import Navbar from "~/components/Navbar";
+import { prepareInstructions } from "~/constants";
 import { convertPdfToImage } from "~/lib/pdf2img";
 import { usePuterStore } from "~/lib/puter";
 import { generateUUID } from "~/lib/utils";
@@ -52,7 +53,27 @@ const upload = () => {
     await kv.set(`resume:${uuid}`, JSON.stringify(data));
 
     setStatusText(`분석하는 중...`);
+
+    const feedback = await ai.feedback(
+      uploadedFile.path,
+      // `당신은 채용 관리 시스템(ATS)과 이력서 분석에 능숙한 전문가입니다.` 
+      // 이런식으로 들고 오지만 index.ts 안에 작성해논 prepareInstructions 란 함수를 호출해서 사용할 수도 있다
+      prepareInstructions({jobTitle, jobDescription})
+    )
+
+    if (!feedback) return setStatusText('에러: 이력서 분석에 실패하였습니다');
+
+    const feedbackText = typeof feedback.message.content === 'string'
+    ? feedback.message.content
+    : feedback.message.content[0].text;
+
+    data.feedback = JSON.parse(feedbackText);
+    await kv.set(`resume:${uuid}`, JSON.stringify(data));
+    setStatusText('분석이 완료되었습니다. 결과 페이지로 이동합니다');
+    console.log(data);
   };
+
+
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
