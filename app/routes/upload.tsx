@@ -7,9 +7,27 @@ import { convertPdfToImage } from "~/lib/pdf2img";
 import { usePuterStore } from "~/lib/puter";
 import { generateUUID } from "~/lib/utils";
 
-const upload = () => {
-  const { auth, isLoading, fs, ai, kv} = usePuterStore();
+// 마크다운 코드블럭(````json`)이 섞여 들어와도 JSON 부분만 뽑아주는 유틸 함수
+function extractJsonString(text: string): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+
+  // ```json ... ``` 형태 제거
+  if (trimmed.startsWith("```")) {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start === -1 || end === -1) return null;
+    return trimmed.slice(start, end + 1);
+  }
+
+  // 이미 순수 JSON일 수도 있으니 그대로 반환
+  return trimmed;
+}
+
+const Upload = () => {
+  const { fs, ai, kv } = usePuterStore();
   const navigate = useNavigate();
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -29,70 +47,124 @@ const upload = () => {
     jobDescription: string;
     file: File;
   }) => {
-    //함수 호출하는 순간 true 파일 업로드 안내
     setIsProcessing(true);
-    setStatusText("파일 업로드 중입니다....");
-    
-    const uploadedFile = await fs.upload([file]);
-    if(!uploadedFile) return setStatusText('에러: 파일 업로드에 실패했습니다');
-    setStatusText('이미지 변환 중...');
-     const imageFile = await convertPdfToImage(file);
-    if(!imageFile.file) return setStatusText('에러: PDF 이미지 변환에 실패했습니다')
-      setStatusText('이미지 업로드 중입니다...');
-    const uploadedImage = await fs.upload([imageFile.file]);
-    if(!uploadedImage) return setStatusText('에러: 이미지 업로드에 실패했습니다...');
-    setStatusText('잠시만 기다려주세요, 데이터를 정리 중입니다');
-    const uuid = generateUUID();
-    const data = {
-      id:uuid,
-      resumePath: uploadedFile.path,
-      imagePath: uploadedFile.path,
-      companyName, jobTitle, jobDescription,
-      feedback:'',
+
+    try {
+      // 1) PDF 업로드
+      setStatusText("파일 업로드 중입니다....");
+      const uploadedFile = await fs.upload([file]);
+      if (!uploadedFile) {
+        setStatusText("에러: 파일 업로드에 실패했습니다");
+        return;
+      }
+
+      // 2) PDF → 이미지 변환
+      setStatusText("이미지 변환 중...");
+      const conversionResult = await convertPdfToImage(file);
+      console.log("🧾 pdf 변환 결과 >>>", conversionResult);
+
+      if (!conversionResult || conversionResult.error || !conversionResult.file) {
+        console.error("PDF 변환 에러:", conversionResult?.error);
+        setStatusText("에러: PDF 이미지 변환에 실패했습니다");
+        return;
+      }
+
+      const imageFile = conversionResult.file;
+
+      // 3) 변환된 이미지 업로드
+      setStatusText("이미지 업로드 중입니다...");
+      const uploadedImage = await fs.upload([imageFile]);
+      if (!uploadedImage) {
+        setStatusText("에러: 이미지 업로드에 실패했습니다...");
+        return;
+      }
+
+      // 4) KV에 기본 데이터 저장
+      setStatusText("잠시만 기다려주세요, 데이터를 정리 중입니다");
+      const uuid = generateUUID();
+
+      const data: {
+        id: string;
+        resumePath: string;
+        imagePath: string;
+        companyName: string;
+        jobTitle: string;
+        jobDescription: string;
+        feedback: any;
+      } = {
+        id: uuid,
+        resumePath: uploadedFile.path,   // PDF 경로
+        imagePath: uploadedImage.path,   // 썸네일 이미지 경로
+        companyName,
+        jobTitle,
+        jobDescription,
+        feedback: "",
+      };
+
+      await kv.set(`resume:${uuid}`, JSON.stringify(data));
+
+      // 5) AI 분석 호출
+      setStatusText("분석하는 중...");
+
+      const feedback = await ai.feedback(
+        uploadedFile.path,
+        prepareInstructions({ jobTitle, jobDescription })
+      );
+
+      if (!feedback) {
+        setStatusText("에러: 이력서 분석에 실패하였습니다");
+        return;
+      }
+
+      const feedbackText =
+        typeof feedback.message.content === "string"
+          ? feedback.message.content
+          : feedback.message.content[0].text;
+
+      const jsonString = extractJsonString(feedbackText);
+
+      if (!jsonString) {
+        console.error("JSON 문자열 추출 실패:", feedbackText);
+        setStatusText("에러: 이력서 분석 결과를 해석하는 데 실패했습니다");
+        return;
+      }
+
+      try {
+        data.feedback = JSON.parse(jsonString);
+      } catch (e) {
+        console.error("JSON 파싱 에러:", e, jsonString);
+        setStatusText("에러: 분석 결과 JSON 파싱에 실패했습니다");
+        return;
+      }
+
+      await kv.set(`resume:${uuid}`, JSON.stringify(data));
+
+      setStatusText("분석이 완료되었습니다. 결과 페이지로 이동합니다");
+      console.log("최종 데이터:", data);
+
+      // 결과 페이지가 있다면 여기에서 이동
+      // navigate(`/resume/${uuid}`);
+    } catch (error) {
+      console.error(error);
+      setStatusText("알 수 없는 에러가 발생했습니다");
+    } finally {
+      setIsProcessing(false);
     }
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
-
-    setStatusText(`분석하는 중...`);
-
-    const feedback = await ai.feedback(
-      uploadedFile.path,
-      // `당신은 채용 관리 시스템(ATS)과 이력서 분석에 능숙한 전문가입니다.` 
-      // 이런식으로 들고 오지만 index.ts 안에 작성해논 prepareInstructions 란 함수를 호출해서 사용할 수도 있다
-      prepareInstructions({jobTitle, jobDescription})
-    )
-
-    if (!feedback) return setStatusText('에러: 이력서 분석에 실패하였습니다');
-
-    const feedbackText = typeof feedback.message.content === 'string'
-    ? feedback.message.content
-    : feedback.message.content[0].text;
-
-    data.feedback = JSON.parse(feedbackText);
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
-    setStatusText('분석이 완료되었습니다. 결과 페이지로 이동합니다');
-    console.log(data);
   };
-
-
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget.closest("form");
-    if (!form) return;
-    const formData = new FormData(form);
+
+    const formData = new FormData(e.currentTarget);
 
     const companyName = formData.get("company-name") as string;
     const jobTitle = formData.get("job-title") as string;
     const jobDescription = formData.get("job-description") as string;
 
-    if (!file) return;
-    console.log({
-      //값이 잘 들어오는 확인용 : 잘들어옴`
-      companyName,
-      jobTitle,
-      jobDescription,
-      file,
-    });
+    if (!file) {
+      setStatusText("이력서를 업로드해주세요");
+      return;
+    }
 
     handleAnalyze({ companyName, jobTitle, jobDescription, file });
   };
@@ -103,10 +175,10 @@ const upload = () => {
       <section className="main-section">
         <div className="page-heading py-16">
           <h1>
-            {" "}
             당신의 커리어 목표를 위한 <br />
-            스마트 피드백{" "}
+            스마트 피드백
           </h1>
+
           {isProcessing ? (
             <>
               <h2>{statusText}</h2>
@@ -114,11 +186,11 @@ const upload = () => {
             </>
           ) : (
             <h2>
-              {" "}
               이력서를 업로드하고, 당신의 채용 가능성을 높여보세요!
-              <br /> (ATS 분석 + 개선 팁 제공){" "}
+              <br /> (ATS 분석 + 개선 팁 제공)
             </h2>
           )}
+
           {!isProcessing && (
             <form
               id="upload-form"
@@ -134,6 +206,7 @@ const upload = () => {
                   id="company-name"
                 />
               </div>
+
               <div className="form-div">
                 <label htmlFor="job-title">지원 직무</label>
                 <input
@@ -143,13 +216,14 @@ const upload = () => {
                   id="job-title"
                 />
               </div>
+
               <div className="form-div">
-                <label htmlFor="job-desctiption">직무 설명</label>
+                <label htmlFor="job-description">직무 설명</label>
                 <textarea
                   rows={5}
-                  name="job-desctiption"
+                  name="job-description"
                   placeholder="직무 관련 설명을 입력하세요"
-                  id="job-desctiption"
+                  id="job-description"
                 />
               </div>
 
@@ -169,4 +243,4 @@ const upload = () => {
   );
 };
 
-export default upload;
+export default Upload;

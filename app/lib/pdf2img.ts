@@ -13,14 +13,19 @@ async function loadPdfJs(): Promise<any> {
   if (loadPromise) return loadPromise;
 
   isLoading = true;
-  // @ts-expect-error - pdfjs-dist/build/pdf.mjs is not a module
-  loadPromise = import("pdfjs-dist/build/pdf.mjs").then((lib) => {
-    // Set the worker source to use local file
-    lib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  loadPromise = (async () => {
+    // pdf.js 메인 모듈 로드
+    // @ts-expect-error - pdfjs-dist/build/pdf.mjs is not a typed module
+    const lib = await import("pdfjs-dist/build/pdf.mjs");
+
+    // 🧩 같은 패키지에서 worker도 로드 (버전 자동 일치)
+    const workerModule = await import("pdfjs-dist/build/pdf.worker.mjs?url");
+
+    lib.GlobalWorkerOptions.workerSrc = workerModule.default;
+
     pdfjsLib = lib;
-    isLoading = false;
     return lib;
-  });
+  })();
 
   return loadPromise;
 }

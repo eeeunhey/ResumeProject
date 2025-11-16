@@ -280,4 +280,5 @@ ${AIResponseFormat}
 - 각 섹션(toneAndStyle/content/structure/skills/ATS)의 tips는 3~4개를 제공하세요.
 - 점수는 0~100 범위를 유지하세요.
 - 결과는 백틱이나 추가 텍스트 없이, 오직 JSON 객체 하나로만 반환하세요.
+- \`\`\`json 같은 코드 블록 문법도 절대 포함하지 마세요.
 `;
