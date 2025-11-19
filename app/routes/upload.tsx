@@ -7,12 +7,11 @@ import { convertPdfToImage } from "~/lib/pdf2img";
 import { usePuterStore } from "~/lib/puter";
 import { generateUUID } from "~/lib/utils";
 
-// 마크다운 코드블럭(````json`)이 섞여 들어와도 JSON 부분만 뽑아주는 유틸 함수
+
 function extractJsonString(text: string): string | null {
   if (!text) return null;
   const trimmed = text.trim();
 
-  // ```json ... ``` 형태 제거
   if (trimmed.startsWith("```")) {
     const start = trimmed.indexOf("{");
     const end = trimmed.lastIndexOf("}");
@@ -20,7 +19,6 @@ function extractJsonString(text: string): string | null {
     return trimmed.slice(start, end + 1);
   }
 
-  // 이미 순수 JSON일 수도 있으니 그대로 반환
   return trimmed;
 }
 
@@ -61,7 +59,7 @@ const Upload = () => {
       // 2) PDF → 이미지 변환
       setStatusText("이미지 변환 중...");
       const conversionResult = await convertPdfToImage(file);
-      console.log("🧾 pdf 변환 결과 >>>", conversionResult);
+      // console.log("🧾 pdf 변환 결과 >>>", conversionResult);
 
       if (!conversionResult || conversionResult.error || !conversionResult.file) {
         console.error("PDF 변환 에러:", conversionResult?.error);
@@ -141,6 +139,7 @@ const Upload = () => {
 
       setStatusText("분석이 완료되었습니다. 결과 페이지로 이동합니다");
       console.log("최종 데이터:", data);
+      navigate(`/resume/${uuid}`);
 
       // 결과 페이지가 있다면 여기에서 이동
       // navigate(`/resume/${uuid}`);

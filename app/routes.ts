@@ -4,6 +4,7 @@ export default [
     index("routes/home.tsx"),
     route('/auth', 'routes/auth.tsx'),
     route('/upload', 'routes/upload.tsx'),
+    route('/resume/:id', 'routes/resume.tsx'),
 ] satisfies RouteConfig;
 //경로 기입
 //index("routes/home.tsx") → / (루트 경로)로 들어왔을 때 
