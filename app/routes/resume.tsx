@@ -1,56 +1,46 @@
-
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { Link } from "react-router";
+import { C } from "node_modules/react-router/dist/development/index-react-server-client-2EDmGlsZ.mjs";
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router";
 import { usePuterStore } from "~/lib/puter";
-export const meta = () => [
-  { title: "Resumind | Review" },
-  { name: "description", content: "이력서를 기반으로 한 상세 요약입니다 " },
-];
+
+// 페이지 제목 설명을 설정
+const meta = () => {
+  [
+    { title: "Resumind | Review" },
+    { name: "desciption", content: "이력서 기반으로 한 상세 요약입니다." },
+  ];
+};
 
 const resume = () => {
-  const {auth, isLoading, fs, kv} = usePuterStore();
+  const { auth, isLoading, fs, kv } = usePuterStore();
+  const [imageUrl, setImageUrl] = useState("");
+  const [resumeUrl, setResumeUrl] = useState("");
   const { id } = useParams();
-  const [imageUrl, setImageUrl] = useState();
-  const [resumeUrl, setResumeUrl] = useState();
-  const [feedback, setFeedback] = useState();
 
-  const nev = useNavigate();
   useEffect(() => {
-    const loadResume= async () => {
-      const resume = await kv.get(`resume:${id}`);
+    const loadResume = async() => {
+      const resuem = await kv.get(`resume:${id}`);
+    };
+  }, [id]);
 
-      if (!resume) return;
-      const data = JSON.parse(resume);
-
-      const resumeBlob = await fs.read(data.resumePath);
-      if(!resumeBlob) return;
-
-      const pdfBlob = new Blob([resumeBlob],{type:'application/pdf'});
-      const resumeUrl = URL.createObjectURL(pdfBlob);
-    }
-  } , [id]);
-
-  return <main className="!pt-0">
-    <nav className="resume-nav">
+  return (
+    <main className="!pt-0">
+      <nav className="reseum-nav">
         <Link to="/" className="back-button">
-        <img src="/icons/back.svg" alt="logo" className="w-2.5, h-2.5"/>
-        <span className=" text-gray-800 text-sm font-semibold">Home</span>
+          <img src="/images/icon-back.svg" alt="logo" className="w-2.5 h-2.5" />
+          <span className="text-gray-800 font-semibold">뒤로가기</span>
         </Link>
-    </nav>
-    {/* 모바일 */}
-    <div className="flex flex-row w-full max-lg:flex-col-reverse">
-      {/* anmation-in fade-in duration-1000 gradient-border max-sm:m-0 h-[90%] max-wxl:h-fit w-fit */}
-        <section className="feedback-section">
-          {/* {imageUrl && resumeUrl &&(
-            <div className="anmation-in fade-in duration-1000 gradient-border max-sm:m-0 h-[90%] max-wxl:h-fit w-fit">
+      </nav>
 
-            </div>
-          )} */}
+      <div className="flex flex-row w-full max-lg:flex-col-reverse">
+        <section>
+          {imageUrl && resumeUrl && (
+            <div className="feedback-section animate-in fade-in duration-100 gradient-border max-sm:m-0 h-[90%] max-wxl:h-fit w-fit"></div>
+          )}
         </section>
-       </div>
-
-  </main>;
+      </div>
+    </main>
+  );
 };
 
 export default resume;
