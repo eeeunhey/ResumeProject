@@ -1,5 +1,6 @@
-import { useEffect } from "react";
-import { useParams } from "react-router";
+
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { Link } from "react-router";
 import { usePuterStore } from "~/lib/puter";
 export const meta = () => [
@@ -10,7 +11,11 @@ export const meta = () => [
 const resume = () => {
   const {auth, isLoading, fs, kv} = usePuterStore();
   const { id } = useParams();
+  const [imageUrl, setImageUrl] = useState();
+  const [resumeUrl, setResumeUrl] = useState();
+  const [feedback, setFeedback] = useState();
 
+  const nev = useNavigate();
   useEffect(() => {
     const loadResume= async () => {
       const resume = await kv.get(`resume:${id}`);
@@ -21,6 +26,8 @@ const resume = () => {
       const resumeBlob = await fs.read(data.resumePath);
       if(!resumeBlob) return;
 
+      const pdfBlob = new Blob([resumeBlob],{type:'application/pdf'});
+      const resumeUrl = URL.createObjectURL(pdfBlob);
     }
   } , [id]);
 
